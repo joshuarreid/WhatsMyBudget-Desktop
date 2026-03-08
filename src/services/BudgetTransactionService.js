@@ -205,11 +205,12 @@ const budgetTransactionService = {
 
         try {
             const apiClient = await getApiClient();
-            // Do NOT set Content-Type manually, let axios/browser handle for multipart boundaries
-            // Do NOT set X-Transaction-ID: apiClient handles propagation/interception globally
+            // IMPORTANT: Override Content-Type to undefined so axios will NOT set it,
+            // allowing the browser to set a correct multipart boundary.
             const response = await apiClient.post(
                 `${RESOURCE}/upload-statement`,
-                formData
+                formData,
+                { headers: { 'Content-Type': undefined } }
             );
             logger.info('uploadCreditCardStatement success', { result: response.data });
             return response.data;
