@@ -27,12 +27,15 @@ export async function getApiClient() {
         }
         apiClientInstance = axios.create({
             baseURL: BASE_URL,
-            headers: config.defaultHeaders || {},
+            headers: {
+                'Content-Type': 'application/json',
+                ...config.defaultHeaders || {}
+            },
             timeout: 10000,
         });
         logger.info('API Client initialized', {
             baseURL: BASE_URL,
-            headers: config.defaultHeaders || {}
+            headers: { 'Content-Type': 'application/json', ...config.defaultHeaders }
         });
         // Request interceptor: add Tx ID and log
         apiClientInstance.interceptors.request.use(
@@ -40,9 +43,12 @@ export async function getApiClient() {
                 const tx = generateTransactionId();
                 request.headers = request.headers || {};
                 request.headers['X-Transaction-ID'] = tx;
+
+                // Log chosen content-type
                 logger.info('request', {
                     url: request.baseURL ? (request.baseURL + (request.url || '')) : request.url,
                     method: request.method,
+                    contentType: request.headers['Content-Type'],
                     params: request.params,
                     dataPreview: request.data ? (typeof request.data === 'object' ? { ...request.data } : request.data) : undefined,
                     transactionId: tx,

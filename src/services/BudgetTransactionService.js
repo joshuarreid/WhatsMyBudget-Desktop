@@ -169,6 +169,55 @@ const budgetTransactionService = {
         }
     },
 
+    /**
+     * POST /api/transactions/upload-statement
+     * Uploads a credit card statement CSV file for bulk import.
+     * @param {File|Blob} file - File to upload (CSV)
+     * @param {string} bank - The originating bank (e.g., 'CHASE', 'AMEX')
+     * @param {string} statementPeriod - Statement period for associating the transactions
+     * @param {string} account - The account associated with the uploaded transactions
+     * @param {string} paymentMethod - The payment method associated with the uploaded transactions
+     * @returns {Promise<Object>} - { insertedCount, duplicateCount, errors }
+     */
+    async uploadCreditCardStatement({ file, bank, statementPeriod, account, paymentMethod }) {
+        logger.info('uploadCreditCardStatement entry', {
+            fileName: file?.name,
+            bank,
+            statementPeriod,
+            account,
+            paymentMethod
+        });
+
+        // Robust input validation with clear log
+        if (!file || !bank || !statementPeriod || !account || !paymentMethod) {
+            logger.error('Missing required params for uploadCreditCardStatement', {
+                hasFile: !!file, bank, statementPeriod, account, paymentMethod
+            });
+            throw new Error('All parameters (file, bank, statementPeriod, account, paymentMethod) are required');
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('bank', bank);
+        formData.append('statementPeriod', statementPeriod);
+        formData.append('account', account);
+        formData.append('paymentMethod', paymentMethod);
+
+        try {
+            const apiClient = await getApiClient();
+            // Do NOT set Content-Type manually, let axios/browser handle for multipart boundaries
+            // Do NOT set X-Transaction-ID: apiClient handles propagation/interception globally
+            const response = await apiClient.post(
+                `${RESOURCE}/upload-statement`,
+                formData
+            );
+            logger.info('uploadCreditCardStatement success', { result: response.data });
+            return response.data;
+        } catch (err) {
+            logger.error('uploadCreditCardStatement error', err);
+            throw err;
+        }
+    },
 
     /**
      * GET /api/transactions/account/budget

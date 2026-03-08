@@ -1,0 +1,163 @@
+/* TransactionFileImportModal.module.css - Modal styles matching TransactionTable.css tokens */
+
+:root {
+    --tt-modal-overlay-bg: rgba(20, 24, 32, 0.92);
+    --tt-modal-bg: #181b20;
+    --tt-modal-border: 1px solid rgba(255,255,255,0.07);
+    --tt-modal-radius: 15px;
+    --tt-modal-shadow: 0 6px 32px rgba(12,19,40,0.46);
+
+    --tt-modal-label: var(--color-muted, #9aa6b2);
+    --tt-modal-label-bold: var(--color-text, #e6eef8);
+    --tt-modal-button: var(--color-accent, #8db0ff);
+    --tt-modal-btn-bg: #21242b;
+    --tt-modal-btn-bg-hover: #2c343f;
+    --tt-modal-btn-radius: 10px;
+    --tt-modal-btn-cancel-bg: transparent;
+    --tt-modal-btn-cancel-color: var(--color-muted, #9aa6b2);
+    --tt-modal-error-color: var(--color-inline-error, #ff8a8a);
+}
+
+.modalOverlay {
+    position: fixed;
+    z-index: 2000;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: var(--tt-modal-overlay-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 120ms cubic-bezier(.4,0,.2,1);
+}
+
+.modal {
+    background: var(--tt-modal-bg);
+    border: var(--tt-modal-border);
+    border-radius: var(--tt-modal-radius);
+    box-shadow: var(--tt-modal-shadow);
+    min-width: 360px;
+    max-width: 95vw;
+    padding: 36px 32px 28px 32px;
+    color: var(--color-text, #e6eef8);
+    font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    position: relative;
+}
+
+h2 {
+    margin: 0 0 6px 0;
+    font-size: 1.18rem;
+    font-weight: 700;
+    color: var(--tt-modal-label-bold);
+    letter-spacing: 0.01em;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+label {
+    display: flex;
+    flex-direction: column;
+    font-size: 0.98rem;
+    font-weight: 500;
+    color: var(--tt-modal-label);
+    gap: 6px;
+    margin-bottom: 0;
+}
+
+input,
+select {
+    background: var(--tt-input-bg, rgba(0,0,0,0.5));
+    border: var(--tt-input-border, 1px solid rgba(255,255,255,0.06));
+    border-radius: 7px;
+    color: var(--color-text, #e6eef8);
+    padding: 9px 12px;
+    font-size: 1rem;
+    font-family: inherit;
+    margin-top: 2px;
+    outline: none;
+    transition: border-color 120ms;
+}
+
+input:focus,
+select:focus {
+    border-color: var(--color-accent, #8db0ff);
+    box-shadow: 0 3px 12px rgba(0,0,0,0.17);
+}
+
+.buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 14px;
+    margin-top: 4px;
+}
+
+button {
+    font-family: inherit;
+    font-size: 1rem;
+    padding: 7px 18px 7px 18px;
+    margin: 0;
+    border-radius: var(--tt-modal-btn-radius);
+    border: none;
+    background: var(--tt-modal-btn-bg);
+    color: var(--color-accent);
+    cursor: pointer;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    box-shadow: none;
+    transition: background 0.18s, color 0.18s, box-shadow 0.18s;
+}
+
+button[type='button'] {
+    background: var(--tt-modal-btn-cancel-bg);
+    color: var(--tt-modal-btn-cancel-color);
+    border: 1px solid transparent;
+}
+
+button:disabled,
+button[aria-disabled='true'] {
+    background: #23272e;
+    color: var(--color-muted, #9aa6b2);
+    cursor: not-allowed;
+    opacity: 0.82;
+}
+
+button:not(:disabled):not([aria-disabled='true']):hover,
+button:not(:disabled):not([aria-disabled='true']):focus {
+    background: var(--tt-modal-btn-bg-hover);
+    color: var(--color-text);
+}
+
+.error {
+    margin-top: 4px;
+    color: var(--tt-modal-error-color);
+    font-weight: 600;
+    font-size: 0.98rem;
+}
+
+strong {
+    color: var(--color-accent, #8db0ff);
+    font-weight: 600;
+}
+
+@media (max-width: 600px) {
+    .modal {
+        min-width: 0;
+        padding: 17px 6vw 14px 6vw;
+        max-width: 99vw;
+    }
+    form {
+        gap: 12px;
+    }
+    .buttons {
+        flex-direction: column;
+        gap: 8px;
+    }
+}

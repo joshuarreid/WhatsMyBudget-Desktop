@@ -2,6 +2,8 @@ import React from "react";
 import PropTypes from "prop-types";
 import styles from "./TransactionTableToolbar.module.css";
 import StatementPeriodDropdown from "../../../../components/statementPeriodDropdown/StatementPeriodDropdown";
+import TransactionFileImportModal from "../TransactionFileImportModal/TransactionFileImportModal";
+
 
 /**
  * Logger for TransactionTableToolbar
@@ -65,6 +67,15 @@ export default function TransactionTableToolbar({ toolbar }) {
             <div className={styles.right}>
                 <div className={styles.totals}>Total: {toolbar.total}</div>
             </div>
+            <TransactionFileImportModal
+                open={toolbar.importModalOpen}
+                onClose={toolbar.handleModalClose}
+                onConfirm={toolbar.handleModalConfirm}
+                initialAccount={toolbar.initialAccount}
+                initialPeriod={toolbar.initialPeriod}
+                initialBank={toolbar.initialBank}
+                file={toolbar.pendingFile}
+            />
         </div>
     );
 }
@@ -80,5 +91,12 @@ TransactionTableToolbar.propTypes = {
         handleFileChange: PropTypes.func.isRequired,
         loading: PropTypes.bool,
         total: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+        importModalOpen: PropTypes.bool,
+        pendingFile: PropTypes.object,
+        handleModalClose: PropTypes.func,
+        handleModalConfirm: PropTypes.func,
+        initialAccount: PropTypes.string,
+        initialPeriod: PropTypes.string,
+        initialBank: PropTypes.string,
     }).isRequired,
 };
