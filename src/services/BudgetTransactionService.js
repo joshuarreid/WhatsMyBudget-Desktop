@@ -188,7 +188,7 @@ const budgetTransactionService = {
             paymentMethod
         });
 
-        // Robust input validation with clear log
+        // Robust input validation with clear logs
         if (!file || !bank || !statementPeriod || !account || !paymentMethod) {
             logger.error('Missing required params for uploadCreditCardStatement', {
                 hasFile: !!file, bank, statementPeriod, account, paymentMethod
@@ -205,16 +205,41 @@ const budgetTransactionService = {
 
         try {
             const apiClient = await getApiClient();
-            // IMPORTANT: Override Content-Type to undefined so axios will NOT set it,
-            // allowing the browser to set a correct multipart boundary.
+
+            // Set timeout to 5 minutes (300,000 ms) for long-running uploads
+            const UPLOAD_TIMEOUT_MS = 300000;
+
+            // Ensure correct request and timeout for file uploads
+            logger.info('Initiating statement upload via apiClient', {
+                url: `${RESOURCE}/upload-statement`,
+                timeoutMs: UPLOAD_TIMEOUT_MS,
+                fileName: file?.name
+            });
+
             const response = await apiClient.post(
                 `${RESOURCE}/upload-statement`,
                 formData,
-                { headers: { 'Content-Type': undefined } }
+                {
+                    headers: { 'Content-Type': undefined },
+                    timeout: UPLOAD_TIMEOUT_MS
+                }
             );
+
             logger.info('uploadCreditCardStatement success', { result: response.data });
+
+            // Handle any post-upload UI reset in the calling component, e.g.:
+            // modal should close, file input should be reset/cleared, state reset
             return response.data;
         } catch (err) {
+            // Axios timeout errors are coded as ECONNABORTED
+            if (err.code === 'ECONNABORTED') {
+                logger.error('uploadCreditCardStatement timeout', {
+                    message: err.message,
+                    timeoutMs: err.config?.timeout,
+                    fileName: file?.name
+                });
+                throw new Error("Upload timed out. Please try uploading a smaller file or check your connection.");
+            }
             logger.error('uploadCreditCardStatement error', err);
             throw err;
         }
