@@ -1,6 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import PropTypes from "prop-types";
 import styles from "./TransactionFileImportModal.module.css";
+import { getAccounts, getPaymentMethods } from "../../../../config/config";
+import { generateOptions } from "../../../../services/StatementPeriodService";
+
+const logger = {
+    info: (...args) => console.log('[TransactionFileImportModal]', ...args),
+    error: (...args) => console.error('[TransactionFileImportModal]', ...args),
+};
 
 /**
  * Modal for confirming and inputting import details before uploading transactions.
@@ -23,20 +30,55 @@ export default function TransactionFileImportModal({
                                                        onClose,
                                                        onConfirm
                                                    }) {
-    const [account, setAccount] = useState(initialAccount || "");
-    const [statementPeriod, setStatementPeriod] = useState(initialPeriod || "");
+    // Get dropdown options from config/services
+    const accountOptions = getAccounts() || [];
+    const paymentMethodOptions = getPaymentMethods() || [];
+    const periodOptions = generateOptions();
+
+    // Local state for fields
+    const [account, setAccount] = useState(initialAccount || (accountOptions[0] || ""));
+    const [statementPeriod, setStatementPeriod] = useState(initialPeriod || (periodOptions[0]?.value || ""));
     const [bank, setBank] = useState(initialBank || "");
-    const [paymentMethod, setPaymentMethod] = useState(""); // Optionally, prefill or infer
+    const [paymentMethod, setPaymentMethod] = useState(paymentMethodOptions[0] || "");
     const [inProgress, setInProgress] = useState(false);
     const [error, setError] = useState("");
 
+    // Only reset form fields when opening the modal from closed state
+    const prevOpen = useRef(open);
+    useEffect(() => {
+        if (open && !prevOpen.current) {
+            logger.info('TransactionFileImportModal opened', {
+                initialAccount, initialPeriod, initialBank, file: file?.name,
+                accountOptions, periodOptions, paymentMethodOptions
+            });
+            setAccount(initialAccount || (accountOptions[0] || ""));
+            const defaultPeriod = (initialPeriod && periodOptions.find(p => p.value === initialPeriod))
+                ? initialPeriod
+                : (periodOptions[0]?.value || "");
+            setStatementPeriod(defaultPeriod);
+            setBank(initialBank || "");
+            setPaymentMethod(paymentMethodOptions[0] || "");
+        }
+        prevOpen.current = open;
+        // DO NOT reset when options arrays change!
+    }, [open, initialAccount, initialPeriod, initialBank, file]);
+
     if (!open) return null;
+
+    const disabledAccount = accountOptions.length === 0;
+    const disabledPeriod = periodOptions.length === 0;
+    const disabledPaymentMethod = paymentMethodOptions.length === 0;
+
+    if (disabledAccount) logger.error("No account options available for dropdown!");
+    if (disabledPeriod) logger.error("No statement period options available for dropdown!");
+    if (disabledPaymentMethod) logger.error("No payment method options available for dropdown!");
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError("");
         if (!account || !statementPeriod || !bank || !file) {
             setError("All fields and a file are required.");
+            logger.error('TransactionFileImportModal: Validation failed', { account, statementPeriod, bank, paymentMethod, file });
             return;
         }
         setInProgress(true);
@@ -44,6 +86,7 @@ export default function TransactionFileImportModal({
             onConfirm({ account, statementPeriod, bank, paymentMethod, file });
         } catch (err) {
             setError(err.message || "Import failed");
+            logger.error('TransactionFileImportModal: Import exception', err);
         } finally {
             setInProgress(false);
         }
@@ -56,11 +99,31 @@ export default function TransactionFileImportModal({
                 <form onSubmit={handleSubmit}>
                     <label>
                         Account
-                        <input value={account} onChange={e => setAccount(e.target.value)} required />
+                        <select
+                            value={account}
+                            onChange={e => setAccount(e.target.value)}
+                            required
+                            disabled={disabledAccount}
+                        >
+                            <option value="">--select--</option>
+                            {accountOptions.map(acc => (
+                                <option value={acc} key={acc}>{acc}</option>
+                            ))}
+                        </select>
                     </label>
                     <label>
                         Statement Period
-                        <input value={statementPeriod} onChange={e => setStatementPeriod(e.target.value)} required />
+                        <select
+                            value={statementPeriod}
+                            onChange={e => setStatementPeriod(e.target.value)}
+                            required
+                            disabled={disabledPeriod}
+                        >
+                            <option value="">--select--</option>
+                            {periodOptions.map(opt => (
+                                <option value={opt.value} key={opt.value}>{opt.label}</option>
+                            ))}
+                        </select>
                     </label>
                     <label>
                         Bank
@@ -73,7 +136,15 @@ export default function TransactionFileImportModal({
                     </label>
                     <label>
                         Payment Method (optional)
-                        <input value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} />
+                        <select
+                            value={paymentMethod}
+                            onChange={e => setPaymentMethod(e.target.value)}
+                            disabled={disabledPaymentMethod}
+                        >
+                            {paymentMethodOptions.map(pm => (
+                                <option value={pm} key={pm}>{pm}</option>
+                            ))}
+                        </select>
                     </label>
                     <div>
                         <strong>File:</strong> {file ? file.name : "No file selected"}
