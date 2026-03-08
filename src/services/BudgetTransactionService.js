@@ -169,6 +169,81 @@ const budgetTransactionService = {
         }
     },
 
+    /**
+     * POST /api/transactions/upload-statement
+     * Uploads a credit card statement CSV file for bulk import.
+     * @param {File|Blob} file - File to upload (CSV)
+     * @param {string} bank - The originating bank (e.g., 'CHASE', 'AMEX')
+     * @param {string} statementPeriod - Statement period for associating the transactions
+     * @param {string} account - The account associated with the uploaded transactions
+     * @param {string} paymentMethod - The payment method associated with the uploaded transactions
+     * @returns {Promise<Object>} - { insertedCount, duplicateCount, errors }
+     */
+    async uploadCreditCardStatement({ file, bank, statementPeriod, account, paymentMethod }) {
+        logger.info('uploadCreditCardStatement entry', {
+            fileName: file?.name,
+            bank,
+            statementPeriod,
+            account,
+            paymentMethod
+        });
+
+        // Robust input validation with clear logs
+        if (!file || !bank || !statementPeriod || !account || !paymentMethod) {
+            logger.error('Missing required params for uploadCreditCardStatement', {
+                hasFile: !!file, bank, statementPeriod, account, paymentMethod
+            });
+            throw new Error('All parameters (file, bank, statementPeriod, account, paymentMethod) are required');
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('bank', bank);
+        formData.append('statementPeriod', statementPeriod);
+        formData.append('account', account);
+        formData.append('paymentMethod', paymentMethod);
+
+        try {
+            const apiClient = await getApiClient();
+
+            // Set timeout to 5 minutes (300,000 ms) for long-running uploads
+            const UPLOAD_TIMEOUT_MS = 300000;
+
+            // Ensure correct request and timeout for file uploads
+            logger.info('Initiating statement upload via apiClient', {
+                url: `${RESOURCE}/upload-statement`,
+                timeoutMs: UPLOAD_TIMEOUT_MS,
+                fileName: file?.name
+            });
+
+            const response = await apiClient.post(
+                `${RESOURCE}/upload-statement`,
+                formData,
+                {
+                    headers: { 'Content-Type': undefined },
+                    timeout: UPLOAD_TIMEOUT_MS
+                }
+            );
+
+            logger.info('uploadCreditCardStatement success', { result: response.data });
+
+            // Handle any post-upload UI reset in the calling component, e.g.:
+            // modal should close, file input should be reset/cleared, state reset
+            return response.data;
+        } catch (err) {
+            // Axios timeout errors are coded as ECONNABORTED
+            if (err.code === 'ECONNABORTED') {
+                logger.error('uploadCreditCardStatement timeout', {
+                    message: err.message,
+                    timeoutMs: err.config?.timeout,
+                    fileName: file?.name
+                });
+                throw new Error("Upload timed out. Please try uploading a smaller file or check your connection.");
+            }
+            logger.error('uploadCreditCardStatement error', err);
+            throw err;
+        }
+    },
 
     /**
      * GET /api/transactions/account/budget

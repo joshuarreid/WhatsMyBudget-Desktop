@@ -1,20 +1,6 @@
-/**
- * useTransactionToolbar.js
- *
- * Hook that encapsulates toolbar logic for TransactionTable feature.
- * Responsibilities:
- *  - Orchestrate actions: add transaction, add projection, import file, delete selected.
- *  - Manages loading, file input interactions, selection count, and total display.
- *  - Standardizes logging for traceability.
- *
- * @module useTransactionToolbar
- */
+import { useCallback, useState } from 'react';
+import budgetTransactionService from "../../../services/BudgetTransactionService";
 
-import { useCallback } from 'react';
-
-/**
- * Logger for useTransactionToolbar.
- */
 const logger = {
     info: (...args) => console.log('[useTransactionToolbar]', ...args),
     error: (...args) => console.error('[useTransactionToolbar]', ...args),
@@ -22,20 +8,13 @@ const logger = {
 
 /**
  * useTransactionToolbar
- * Encapsulates toolbar logic for transaction table actions.
+ * Provides toolbar logic for TransactionTable.
+ * Populates the import modal with the current account and statement period from context.
  *
- * @function useTransactionToolbar
- * @param {Object} params - Parameters for toolbar actions and state.
- * @param {Function} params.onAdd - Handler for adding a budget transaction.
- * @param {Function} params.onAddProjection - Handler for adding a projected transaction.
- * @param {Function} params.onImport - Handler for importing transactions from file.
- * @param {Function} params.onDelete - Handler for deleting selected transactions.
- * @param {number} params.selectedCount - Number of selected items.
- * @param {Object} params.fileInputRef - Ref for hidden file input.
- * @param {Function} params.onFileChange - Handler for file change event.
- * @param {boolean} params.loading - Flag for loading state.
- * @param {string} params.total - Formatted total string for display.
- * @returns {Object} API surface for TransactionTableToolbar
+ * @param {Object} params
+ * @param {string} params.currentAccount - Current account visible in the table/filter.
+ * @param {string} params.currentStatementPeriod - Current statement period from context.
+ * @param {string} params.currentBank - Current bank (optional).
  */
 export function useTransactionToolbar({
                                           onAdd,
@@ -47,56 +26,113 @@ export function useTransactionToolbar({
                                           onFileChange,
                                           loading = false,
                                           total,
+                                          currentAccount = "",
+                                          currentStatementPeriod = "",
+                                          currentBank = "",
                                       }) {
-    /**
-     * Handles add transaction click.
-     */
+    // Modal context (object with current info for this import)
+    const [importModalContext, setImportModalContext] = useState(null);
+
+    logger.info('useTransactionToolbar hook initialized', {
+        selectedCount,
+        loading,
+        total,
+        currentAccount,
+        currentStatementPeriod,
+        currentBank,
+    });
+
     const handleAdd = useCallback(() => {
         logger.info('Add Transaction clicked');
         onAdd?.();
     }, [onAdd]);
 
-    /**
-     * Handles add projection click.
-     */
     const handleAddProjection = useCallback(() => {
         logger.info('Add Projection clicked');
         onAddProjection?.();
     }, [onAddProjection]);
 
-    /**
-     * Handles import file click.
-     */
     const handleImport = useCallback(() => {
-        logger.info('Import Transactions clicked');
-        onImport?.();
-    }, [onImport]);
+        logger.info('Import Transactions clicked (open file picker)');
+        if (fileInputRef && fileInputRef.current) {
+            fileInputRef.current.value = "";
+            fileInputRef.current.click();
+        }
+    }, [fileInputRef]);
 
     /**
-     * Handles delete selected click.
+     * When the user selects a file, capture the *latest* account/period context.
      */
+    const handleFileChange = useCallback(
+        (event) => {
+            const file = event.target?.files?.[0];
+            logger.info('File input changed', { file: file?.name });
+            if (file) {
+                logger.info('Populating import modal context', {
+                    currentAccount,
+                    currentStatementPeriod,
+                    currentBank,
+                    fileName: file.name
+                });
+                setImportModalContext({
+                    initialAccount: currentAccount,
+                    initialPeriod: currentStatementPeriod,
+                    initialBank: currentBank,
+                    file,
+                });
+            }
+            if (onFileChange) onFileChange(event);
+        },
+        [onFileChange, currentAccount, currentStatementPeriod, currentBank]
+    );
+
+    const openFilePicker = useCallback(() => {
+        handleImport();
+    }, [handleImport]);
+
+    const handleModalClose = useCallback(() => {
+        logger.info('Import Modal closed');
+        setImportModalContext(null);
+    }, []);
+
+    const handleModalConfirm = useCallback(
+        async ({ account, statementPeriod, bank, paymentMethod, file }) => {
+            logger.info('Import Modal confirmed', {
+                account, statementPeriod, bank, paymentMethod, file: file?.name,
+            });
+
+            if (!account || !statementPeriod || !bank || !file) {
+                logger.error('Import parameters missing', {
+                    account, statementPeriod, bank, file,
+                });
+                alert("All fields and a file are required for import.");
+                return;
+            }
+
+            try {
+                const result = await budgetTransactionService.uploadCreditCardStatement({
+                    file,
+                    bank,
+                    statementPeriod,
+                    account,
+                    paymentMethod
+                });
+                logger.info('Import successful', result);
+                if (onImport) onImport(result);
+            } catch (err) {
+                logger.error('Import error', err);
+                alert("Import failed: " + (err.message || String(err)));
+            } finally {
+                handleModalClose();
+            }
+        },
+        [onImport, handleModalClose]
+    );
+
     const handleDelete = useCallback(() => {
         logger.info('Delete Selected clicked', { selectedCount });
         onDelete?.();
     }, [onDelete, selectedCount]);
-
-    /**
-     * Handles file input change event.
-     *
-     * @param {Event} event - File input change event.
-     */
-    const handleFileChange = useCallback((event) => {
-        logger.info('File input changed', { files: event.target?.files?.length });
-        onFileChange?.(event);
-    }, [onFileChange]);
-
-    /**
-     * Opens the hidden file picker input.
-     */
-    const openFilePicker = useCallback(() => {
-        logger.info('Opening file picker');
-        fileInputRef?.current?.click();
-    }, [fileInputRef]);
 
     return {
         handleAdd,
@@ -109,6 +145,14 @@ export function useTransactionToolbar({
         loading,
         total,
         fileInputRef,
+        // Expose modal context as a single object (null if closed)
+        importModalOpen: !!importModalContext,
+        handleModalClose,
+        handleModalConfirm,
+        initialAccount: importModalContext ? importModalContext.initialAccount : "",
+        initialPeriod: importModalContext ? importModalContext.initialPeriod : "",
+        initialBank: importModalContext ? importModalContext.initialBank : "",
+        pendingFile: importModalContext ? importModalContext.file : null,
     };
 }
 

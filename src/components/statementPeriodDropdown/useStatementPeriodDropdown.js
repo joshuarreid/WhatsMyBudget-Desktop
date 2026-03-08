@@ -18,7 +18,7 @@ const logger = {
  * @param {Date} [params.anchor=new Date()]
  * @returns {object} Dropdown state/actions for UI consumption.
  */
-export default function useStatementPeriodDropdown({ prev = 1, forward = 5, anchor = new Date() } = {}) {
+export default function useStatementPeriodDropdown({ prev = 3, forward = 5, anchor = new Date() } = {}) {
     const options = useMemo(() => generateOptions({ anchor, prev, forward }), [anchor, prev, forward]);
     const defaultOpt = useMemo(() => getCurrentOption(options), [options]);
 
