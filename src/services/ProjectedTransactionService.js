@@ -14,7 +14,7 @@ const logger = {
     error: (...args) => console.error('[ProjectedTransactionService]', ...args),
 };
 
-import { getApiClient } from '../lib/apiClient';
+import { getApiClient } from '../api/apiClient';
 
 const RESOURCE = '/api/projections';
 

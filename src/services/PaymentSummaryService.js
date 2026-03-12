@@ -12,7 +12,7 @@ const logger = {
     error: (...args) => console.error('[PaymentSummaryService]', ...args),
 };
 
-import { getApiClient } from '../lib/apiClient'; // Centralized axios instance
+import { getApiClient } from '../api/apiClient'; // Centralized axios instance
 
 const RESOURCE = '/api/payment-summary';
 
