@@ -12,7 +12,9 @@ const logger = {
 
 /**
  * PaymentSummaryApiClient
- * Specialized API client for /api/payment-summary endpoints.
+ * - Specialized API client for /api/payment-summary endpoints.
+ * - Implements fetching payment summaries for accounts/periods.
+ *
  * @class
  * @extends ApiClient
  */
@@ -26,5 +28,33 @@ export default class PaymentSummaryApiClient extends ApiClient {
     constructor({ baseURL, timeout = 10000 } = {}) {
         super({ baseURL, timeout, apiPath: '/api/payment-summary' });
         logger.info('PaymentSummaryApiClient initialized');
+    }
+
+    /**
+     * Fetches payment summary for given accounts and statementPeriod.
+     * @async
+     * @param {Array<string>} accounts - Account identifiers.
+     * @param {string} statementPeriod - Statement period.
+     * @param {string} [transactionId] - Optional X-Transaction-ID for tracing.
+     * @returns {Promise<Object[]>} Array of PaymentSummaryResponse objects.
+     * @throws {Error}
+     */
+    async getPaymentSummary(accounts, statementPeriod, transactionId) {
+        if (!Array.isArray(accounts) || accounts.length === 0) {
+            throw new Error('Accounts array required.');
+        }
+        if (!statementPeriod || typeof statementPeriod !== 'string') {
+            throw new Error('statementPeriod required.');
+        }
+        const params = {
+            accounts: accounts.join(','),
+            statementPeriod,
+        };
+        const headers = {};
+        if (transactionId) {
+            headers['X-Transaction-ID'] = transactionId;
+        }
+        logger.info('getPaymentSummary called', { accounts, statementPeriod, transactionId });
+        return this.get('/', params, { headers });
     }
 }

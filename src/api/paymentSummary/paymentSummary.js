@@ -1,4 +1,4 @@
-import PaymentSummaryApiClient from './PaymentSummaryApiClient.js';
+import PaymentSummaryApiClient from './paymentSummaryApiClient.js';
 
 /**
  * Singleton instance of PaymentSummaryApiClient.
@@ -19,7 +19,7 @@ const logger = {
 
 /**
  * Fetches payment summary for the given accounts and statement period.
- * Calls /api/payment-summary with params.
+ * Calls /api/payment-summary endpoint.
  * @async
  * @function getPaymentSummary
  * @param {Object} params
@@ -31,26 +31,8 @@ const logger = {
  */
 export async function getPaymentSummary({ accounts, statementPeriod, transactionId }) {
     logger.info('getPaymentSummary called', { accounts, statementPeriod, transactionId });
-
-    if (!Array.isArray(accounts) || accounts.length === 0) {
-        logger.error('getPaymentSummary: No accounts provided', { accounts });
-        throw new Error('Accounts array required.');
-    }
-    if (!statementPeriod || typeof statementPeriod !== 'string') {
-        logger.error('getPaymentSummary: No statementPeriod provided', { statementPeriod });
-        throw new Error('statementPeriod required.');
-    }
-
     try {
-        const params = {
-            accounts: accounts.join(','),
-            statementPeriod,
-        };
-        const headers = {};
-        if (transactionId) {
-            headers['X-Transaction-ID'] = transactionId;
-        }
-        const response = await apiClient.get('/', params, { headers });
+        const response = await apiClient.getPaymentSummary(accounts, statementPeriod, transactionId);
         logger.info('getPaymentSummary success', {
             count: Array.isArray(response?.data) ? response.data.length : 0,
             sample: Array.isArray(response?.data) ? response.data[0] : response.data,

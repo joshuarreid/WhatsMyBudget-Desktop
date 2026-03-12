@@ -1,4 +1,4 @@
-import ProjectedTransactionApiClient from "./projectedTransactionApiClient";
+import ProjectedTransactionApiClient from './projectedTransactionApiClient.js';
 
 /**
  * Singleton instance of ProjectedTransactionApiClient.
@@ -21,17 +21,13 @@ const logger = {
  * @async
  * @function getTransactions
  * @param {Object} [filters={}] - Supported: statementPeriod, account, category, criticality, paymentMethod.
- * @param {string} [transactionId] - Optional X-Transaction-ID.
  * @returns {Promise<Object>} ProjectedTransactionList.
  * @throws {Error} On request failure.
  */
-export async function getTransactions(filters = {}, transactionId) {
-    logger.info('getTransactions called', { filters, transactionId });
-    const config = transactionId
-        ? { params: filters, headers: { 'X-Transaction-ID': transactionId } }
-        : { params: filters };
+export async function getTransactions(filters = {}) {
+    logger.info('getTransactions called', { filters });
     try {
-        const response = await apiClient.get('/', config.params, { headers: config.headers });
+        const response = await apiClient.getTransactions(filters);
         logger.info('getTransactions success', {
             count: response?.data?.count ?? 0,
             total: response?.data?.total ?? 0,
@@ -48,16 +44,13 @@ export async function getTransactions(filters = {}, transactionId) {
  * @async
  * @function getTransactionById
  * @param {number|string} id - Required transaction id.
- * @param {string} [transactionId] - Optional X-Transaction-ID.
  * @returns {Promise<Object>} ProjectedTransaction object.
  * @throws {Error} On request failure or if id missing.
  */
-export async function getTransactionById(id, transactionId) {
-    logger.info('getTransactionById called', { id, transactionId });
-    if (!id) throw new Error('Transaction ID required');
-    const config = transactionId ? { headers: { 'X-Transaction-ID': transactionId } } : {};
+export async function getTransactionById(id) {
+    logger.info('getTransactionById called', { id });
     try {
-        const response = await apiClient.get(`/${encodeURIComponent(id)}`, {}, config);
+        const response = await apiClient.getTransactionById(id);
         logger.info('getTransactionById success', { transaction: response?.data });
         return response?.data || null;
     } catch (error) {
@@ -71,18 +64,13 @@ export async function getTransactionById(id, transactionId) {
  * @async
  * @function getTransactionsForAccount
  * @param {Object} params - { account, statementPeriod, category, criticality, paymentMethod }
- * @param {string} [transactionId] - Optional X-Transaction-ID.
  * @returns {Promise<Object>} AccountProjectedTransactionList
  * @throws {Error} On request failure or if account missing.
  */
-export async function getTransactionsForAccount(params = {}, transactionId) {
-    logger.info('getTransactionsForAccount called', { ...params, transactionId });
-    if (!params.account) throw new Error('Account is required');
-    const config = transactionId
-        ? { headers: { 'X-Transaction-ID': transactionId } }
-        : {};
+export async function getTransactionsForAccount(params = {}) {
+    logger.info('getTransactionsForAccount called', params);
     try {
-        const response = await apiClient.get('/account', params, config);
+        const response = await apiClient.getTransactionsForAccount(params);
         logger.info('getTransactionsForAccount success', {
             personalCount: response?.data?.personalTransactions?.count ?? 0,
             jointCount: response?.data?.jointTransactions?.count ?? 0,
@@ -101,20 +89,17 @@ export async function getTransactionsForAccount(params = {}, transactionId) {
  * @async
  * @function createTransaction
  * @param {Object} transaction - ProjectedTransaction payload.
- * @param {string} [transactionId] - Optional X-Transaction-ID.
  * @returns {Promise<Object>} Created projected transaction object.
  * @throws {Error} On request failure.
  */
-export async function createTransaction(transaction, transactionId) {
+export async function createTransaction(transaction) {
     logger.info('createTransaction called', {
         transactionPreview: transaction
             ? { name: transaction.name, amount: transaction.amount, statementPeriod: transaction.statementPeriod }
             : null,
-        transactionId
     });
-    const config = transactionId ? { headers: { 'X-Transaction-ID': transactionId } } : {};
     try {
-        const response = await apiClient.post('/', transaction, config);
+        const response = await apiClient.createTransaction(transaction);
         logger.info('createTransaction success', { created: response?.data });
         return response?.data || null;
     } catch (error) {
@@ -129,20 +114,16 @@ export async function createTransaction(transaction, transactionId) {
  * @function updateTransaction
  * @param {number|string} id - Transaction id (required).
  * @param {Object} transaction - Updated transaction payload.
- * @param {string} [transactionId] - Optional X-Transaction-ID.
  * @returns {Promise<Object>} Updated projected transaction object.
  * @throws {Error} On request failure or if id missing.
  */
-export async function updateTransaction(id, transaction, transactionId) {
+export async function updateTransaction(id, transaction) {
     logger.info('updateTransaction called', {
         id,
         transactionPreview: transaction ? { name: transaction.name, amount: transaction.amount } : null,
-        transactionId
     });
-    if (!id) throw new Error('Transaction ID required');
-    const config = transactionId ? { headers: { 'X-Transaction-ID': transactionId } } : {};
     try {
-        const response = await apiClient.put(`/${encodeURIComponent(id)}`, transaction, config);
+        const response = await apiClient.updateTransaction(id, transaction);
         logger.info('updateTransaction success', { updated: response?.data });
         return response?.data || null;
     } catch (error) {
@@ -156,16 +137,13 @@ export async function updateTransaction(id, transaction, transactionId) {
  * @async
  * @function deleteTransaction
  * @param {number|string} id - Required transaction id.
- * @param {string} [transactionId] - Optional X-Transaction-ID.
  * @returns {Promise<Object>} Response.
  * @throws {Error} On request failure or if id missing.
  */
-export async function deleteTransaction(id, transactionId) {
-    logger.info('deleteTransaction called', { id, transactionId });
-    if (!id) throw new Error('Transaction ID required');
-    const config = transactionId ? { headers: { 'X-Transaction-ID': transactionId } } : {};
+export async function deleteTransaction(id) {
+    logger.info('deleteTransaction called', { id });
     try {
-        const response = await apiClient.delete(`/${encodeURIComponent(id)}`, {}, config);
+        const response = await apiClient.deleteTransaction(id);
         logger.info('deleteTransaction success', { status: response?.status });
         return response?.data || null;
     } catch (error) {
@@ -178,15 +156,13 @@ export async function deleteTransaction(id, transactionId) {
  * Deletes all projected transactions.
  * @async
  * @function deleteAllTransactions
- * @param {string} [transactionId] - Optional X-Transaction-ID.
  * @returns {Promise<Object>} Server response, e.g. { deletedCount }
  * @throws {Error} On request failure.
  */
-export async function deleteAllTransactions(transactionId) {
-    logger.info('deleteAllTransactions called', { transactionId });
-    const config = transactionId ? { headers: { 'X-Transaction-ID': transactionId } } : {};
+export async function deleteAllTransactions() {
+    logger.info('deleteAllTransactions called');
     try {
-        const response = await apiClient.delete('/', {}, config);
+        const response = await apiClient.deleteAllTransactions();
         logger.info('deleteAllTransactions success', { deletedCount: response?.data?.deletedCount });
         return response?.data || null;
     } catch (error) {

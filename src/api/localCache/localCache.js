@@ -2,6 +2,7 @@ import LocalCacheApiClient from './localCacheApiClient.js';
 
 /**
  * Singleton instance of LocalCacheApiClient.
+ * Ensures all cache API requests go through a preconfigured client.
  * @constant
  * @type {LocalCacheApiClient}
  */
@@ -26,9 +27,8 @@ const logger = {
  */
 export async function getCache(cacheKey) {
     logger.info('getCache called', { cacheKey });
-    if (!cacheKey) throw new Error('cacheKey required');
     try {
-        const response = await apiClient.get(`/${encodeURIComponent(cacheKey)}`);
+        const response = await apiClient.getCache(cacheKey);
         return response?.data || null;
     } catch (error) {
         logger.error('getCache failed', { cacheKey, error });
@@ -47,11 +47,8 @@ export async function getCache(cacheKey) {
  */
 export async function setCache(cacheKey, cacheValue) {
     logger.info('setCache called', { cacheKey, cacheValue });
-    if (!cacheKey) throw new Error('cacheKey required');
     try {
-        const response = await apiClient.post('/', null, {
-            params: { cacheKey, cacheValue: String(cacheValue) },
-        });
+        const response = await apiClient.setCache(cacheKey, cacheValue);
         return response?.data || null;
     } catch (error) {
         logger.error('setCache failed', { cacheKey, error });
@@ -69,9 +66,8 @@ export async function setCache(cacheKey, cacheValue) {
  */
 export async function deleteCache(cacheKey) {
     logger.info('deleteCache called', { cacheKey });
-    if (!cacheKey) throw new Error('cacheKey required');
     try {
-        const response = await apiClient.delete(`/${encodeURIComponent(cacheKey)}`);
+        const response = await apiClient.deleteCache(cacheKey);
         return response?.data || null;
     } catch (error) {
         logger.error('deleteCache failed', { cacheKey, error });
@@ -89,7 +85,7 @@ export async function deleteCache(cacheKey) {
 export async function deleteAllCache() {
     logger.info('deleteAllCache called');
     try {
-        const response = await apiClient.delete('/');
+        const response = await apiClient.deleteAllCache();
         return response?.data || null;
     } catch (error) {
         logger.error('deleteAllCache failed', error);

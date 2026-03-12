@@ -18,17 +18,17 @@ const logger = {
 };
 
 /**
- * Fetches all transactions (with optional filters).
+ * Fetches all transactions with optional filters.
  * @async
  * @function getTransactions
- * @param {Object} [filters={}] - Filter params.
- * @returns {Promise<Object>} - BudgetTransactionList: { transactions, count, total }
+ * @param {Object} [filters={}] - Filter parameters (statementPeriod, account, etc.).
+ * @returns {Promise<Object>} BudgetTransactionList: { transactions, count, total }
  * @throws {Error} If the request fails.
  */
 export async function getTransactions(filters = {}) {
     logger.info('getTransactions called', { filters });
     try {
-        const response = await apiClient.get('/', filters);
+        const response = await apiClient.getTransactions(filters);
         return response?.data || null;
     } catch (error) {
         logger.error('getTransactions failed', error);
@@ -41,13 +41,13 @@ export async function getTransactions(filters = {}) {
  * @async
  * @function getTransactionById
  * @param {string|number} id - Transaction ID.
- * @returns {Promise<Object>} - Transaction object.
+ * @returns {Promise<Object>} Transaction object.
  * @throws {Error} If not found or request fails.
  */
 export async function getTransactionById(id) {
     logger.info('getTransactionById called', { id });
     try {
-        const response = await apiClient.get(`/${encodeURIComponent(id)}`);
+        const response = await apiClient.getTransactionById(id);
         return response?.data || null;
     } catch (error) {
         logger.error('getTransactionById failed', error);
@@ -60,13 +60,13 @@ export async function getTransactionById(id) {
  * @async
  * @function createTransaction
  * @param {Object} transaction - Transaction payload.
- * @returns {Promise<Object>} - Created transaction.
+ * @returns {Promise<Object>} Created transaction object.
  * @throws {Error} If request fails.
  */
 export async function createTransaction(transaction) {
     logger.info('createTransaction called', { transaction });
     try {
-        const response = await apiClient.post('/', transaction);
+        const response = await apiClient.createTransaction(transaction);
         return response?.data || null;
     } catch (error) {
         logger.error('createTransaction failed', error);
@@ -78,15 +78,15 @@ export async function createTransaction(transaction) {
  * Updates a transaction by ID.
  * @async
  * @function updateTransaction
- * @param {string|number} id
- * @param {Object} transaction
- * @returns {Promise<Object>} Updated transaction
- * @throws {Error} If not found or request fails
+ * @param {string|number} id - Transaction ID.
+ * @param {Object} transaction - Updated transaction payload.
+ * @returns {Promise<Object>} Updated transaction object.
+ * @throws {Error} If not found or request fails.
  */
 export async function updateTransaction(id, transaction) {
     logger.info('updateTransaction called', { id });
     try {
-        const response = await apiClient.put(`/${encodeURIComponent(id)}`, transaction);
+        const response = await apiClient.updateTransaction(id, transaction);
         return response?.data || null;
     } catch (error) {
         logger.error('updateTransaction failed', error);
@@ -98,14 +98,14 @@ export async function updateTransaction(id, transaction) {
  * Deletes a transaction by ID.
  * @async
  * @function deleteTransaction
- * @param {string|number} id
+ * @param {string|number} id - Transaction ID.
  * @returns {Promise<void>} Resolves on success.
  * @throws {Error} If not found or request fails.
  */
 export async function deleteTransaction(id) {
     logger.info('deleteTransaction called', { id });
     try {
-        await apiClient.delete(`/${encodeURIComponent(id)}`);
+        await apiClient.deleteTransaction(id);
     } catch (error) {
         logger.error('deleteTransaction failed', error);
         throw error;
@@ -122,7 +122,7 @@ export async function deleteTransaction(id) {
 export async function deleteAllTransactions() {
     logger.info('deleteAllTransactions called');
     try {
-        const response = await apiClient.delete('/');
+        const response = await apiClient.deleteAllTransactions();
         return response?.data || null;
     } catch (error) {
         logger.error('deleteAllTransactions failed', error);
@@ -134,21 +134,15 @@ export async function deleteAllTransactions() {
  * Uploads transactions via CSV file (bulk upload).
  * @async
  * @function uploadTransactions
- * @param {File|Blob} file
- * @param {string} statementPeriod
+ * @param {File|Blob} file - CSV file.
+ * @param {string} statementPeriod - Statement period.
  * @returns {Promise<Object>} API response.
  * @throws {Error} If upload fails.
  */
 export async function uploadTransactions(file, statementPeriod) {
     logger.info('uploadTransactions called', { fileName: file?.name, statementPeriod });
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('statementPeriod', statementPeriod);
-
     try {
-        const response = await apiClient.post('/upload', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-        });
+        const response = await apiClient.uploadTransactions(file, statementPeriod);
         return response?.data || null;
     } catch (error) {
         logger.error('uploadTransactions failed', error);
@@ -161,13 +155,13 @@ export async function uploadTransactions(file, statementPeriod) {
  * @async
  * @function getTransactionsForAccount
  * @param {Object} filters - { account, statementPeriod, category, criticality, paymentMethod }
- * @returns {Promise<Object>} BudgetTransactionList
+ * @returns {Promise<Object>} BudgetTransactionList.
  * @throws {Error} If request fails.
  */
 export async function getTransactionsForAccount(filters) {
     logger.info('getTransactionsForAccount called', filters);
     try {
-        const response = await apiClient.get('/account', filters);
+        const response = await apiClient.getTransactionsForAccount(filters);
         return response?.data || null;
     } catch (error) {
         logger.error('getTransactionsForAccount failed', error);
@@ -179,38 +173,22 @@ export async function getTransactionsForAccount(filters) {
  * Uploads a credit card statement (CSV file) for bulk import.
  * @async
  * @function uploadCreditCardStatement
- * @param {Object} params
- * @param {File|Blob} params.file
- * @param {string} params.bank
- * @param {string} params.statementPeriod
- * @param {string} params.account
- * @param {string} params.paymentMethod
- * @returns {Promise<Object>} Upload results: {insertedCount, duplicateCount, errors}
+ * @param {Object} params - { file, bank, statementPeriod, account, paymentMethod }
+ * @returns {Promise<Object>} Upload results: { insertedCount, duplicateCount, errors }
  * @throws {Error} If any param is missing or request/upload fails.
  */
-export async function uploadCreditCardStatement({ file, bank, statementPeriod, account, paymentMethod }) {
+export async function uploadCreditCardStatement(params) {
     logger.info('uploadCreditCardStatement called', {
-        fileName: file?.name, bank, statementPeriod, account, paymentMethod
+        fileName: params?.file?.name, bank: params?.bank, statementPeriod: params?.statementPeriod, account: params?.account, paymentMethod: params?.paymentMethod
     });
 
-    if (!file || !bank || !statementPeriod || !account || !paymentMethod) {
-        logger.error('uploadCreditCardStatement missing params', { file, bank, statementPeriod, account, paymentMethod });
+    if (!params?.file || !params.bank || !params.statementPeriod || !params.account || !params.paymentMethod) {
+        logger.error('uploadCreditCardStatement missing params', params);
         throw new Error('All parameters (file, bank, statementPeriod, account, paymentMethod) are required');
     }
 
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('bank', bank);
-    formData.append('statementPeriod', statementPeriod);
-    formData.append('account', account);
-    formData.append('paymentMethod', paymentMethod);
-
     try {
-        // Large timeout for uploads
-        const response = await apiClient.post('/upload-statement', formData, {
-            headers: { 'Content-Type': undefined },
-            timeout: 300000,
-        });
+        const response = await apiClient.uploadCreditCardStatement(params);
         return response?.data || null;
     } catch (error) {
         logger.error('uploadCreditCardStatement failed', error);
@@ -223,13 +201,13 @@ export async function uploadCreditCardStatement({ file, bank, statementPeriod, a
  * @async
  * @function getBudgetTransactionsForAccount
  * @param {Object} filters - { account, statementPeriod, category, criticality, paymentMethod }
- * @returns {Promise<Object>} BudgetTransactionList
+ * @returns {Promise<Object>} BudgetTransactionList.
  * @throws {Error} If request fails.
  */
 export async function getBudgetTransactionsForAccount(filters) {
     logger.info('getBudgetTransactionsForAccount called', filters);
     try {
-        const response = await apiClient.get('/account/budget', filters);
+        const response = await apiClient.getBudgetTransactionsForAccount(filters);
         return response?.data || null;
     } catch (error) {
         logger.error('getBudgetTransactionsForAccount failed', error);
