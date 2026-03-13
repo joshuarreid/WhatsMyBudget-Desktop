@@ -76,11 +76,20 @@ export function useTransactionRow({
     const isSaving = savingIds && savingIds.has(tx.id);
     const inlineError = saveErrors && saveErrors[tx.id];
 
+    /**
+     * ALL_CATEGORIES
+     * List of all category options, always alphabetically sorted.
+     * @type {string[]}
+     */
     const ALL_CATEGORIES = useMemo(() => {
         try {
             const cats = getCategories() || [];
-            logger.info('useTransactionRow: loaded categories', { count: cats.length, sample: cats.slice(0, 6) });
-            return cats;
+            // Alphabetize with localeCompare, case-insensitive
+            const sorted = cats.slice().sort((a, b) =>
+                a.localeCompare(b, undefined, { sensitivity: 'base' })
+            );
+            logger.info('useTransactionRow: loaded and sorted categories', { count: sorted.length, sample: sorted.slice(0, 6) });
+            return sorted;
         } catch (err) {
             logger.error('useTransactionRow: failed to load categories', err);
             return [];
