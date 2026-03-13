@@ -2,6 +2,7 @@ import ProjectedTransactionApiClient from './projectedTransactionApiClient.js';
 
 /**
  * Singleton instance of ProjectedTransactionApiClient.
+ * Ensures all projected transaction API requests use centralized client.
  * @constant
  * @type {ProjectedTransactionApiClient}
  */
@@ -17,61 +18,64 @@ const logger = {
 };
 
 /**
- * Fetches list of projected transactions with optional filters.
+ * Fetches a list of projected transactions with optional filters.
+ *
  * @async
- * @function getTransactions
- * @param {Object} [filters={}] - Supported: statementPeriod, account, category, criticality, paymentMethod.
+ * @function getProjectedTransactions
+ * @param {Object} [filters={}] - Supported filters: statementPeriod, account, category, criticality, paymentMethod.
  * @returns {Promise<Object>} ProjectedTransactionList.
- * @throws {Error} On request failure.
+ * @throws {Error} If the request fails.
  */
-export async function getTransactions(filters = {}) {
-    logger.info('getTransactions called', { filters });
+export async function getProjectedTransactions(filters = {}) {
+    logger.info('getProjectedTransactions called', { filters });
     try {
         const response = await apiClient.getTransactions(filters);
-        logger.info('getTransactions success', {
+        logger.info('getProjectedTransactions success', {
             count: response?.data?.count ?? 0,
             total: response?.data?.total ?? 0,
         });
         return response?.data || null;
     } catch (error) {
-        logger.error('getTransactions failed', error);
+        logger.error('getProjectedTransactions failed', error);
         throw error;
     }
 }
 
 /**
- * Fetches a single projected transaction by id.
+ * Fetches a single projected transaction by ID.
+ *
  * @async
- * @function getTransactionById
- * @param {number|string} id - Required transaction id.
+ * @function getProjectedTransactionById
+ * @param {number|string} projectedTransactionId - The projected transaction ID.
  * @returns {Promise<Object>} ProjectedTransaction object.
- * @throws {Error} On request failure or if id missing.
+ * @throws {Error} If not found or request fails.
  */
-export async function getTransactionById(id) {
-    logger.info('getTransactionById called', { id });
+export async function getProjectedTransactionById(projectedTransactionId) {
+    logger.info('getProjectedTransactionById called', { projectedTransactionId });
     try {
-        const response = await apiClient.getTransactionById(id);
-        logger.info('getTransactionById success', { transaction: response?.data });
+        const response = await apiClient.getTransactionById(projectedTransactionId);
+        logger.info('getProjectedTransactionById success', { projectedTransaction: response?.data });
         return response?.data || null;
     } catch (error) {
-        logger.error('getTransactionById failed', error);
+        logger.error('getProjectedTransactionById failed', error);
         throw error;
     }
 }
 
 /**
- * Fetches projected transactions for an account with personal/joint split.
+ * Fetches projected transactions for an account, grouped by personal/joint.
+ *
  * @async
- * @function getTransactionsForAccount
- * @param {Object} params - { account, statementPeriod, category, criticality, paymentMethod }
+ * @function getProjectedTransactionsForAccount
+ * @param {Object} filters - Must include at least { account }, optionally statementPeriod, category, criticality, paymentMethod.
  * @returns {Promise<Object>} AccountProjectedTransactionList
- * @throws {Error} On request failure or if account missing.
+ * @throws {Error} If request fails or account is missing.
  */
-export async function getTransactionsForAccount(params = {}) {
-    logger.info('getTransactionsForAccount called', params);
+export async function getProjectedTransactionsForAccount(filters = {}) {
+    logger.info('getProjectedTransactionsForAccount called', filters);
     try {
-        const response = await apiClient.getTransactionsForAccount(params);
-        logger.info('getTransactionsForAccount success', {
+        const response = await apiClient.getTransactionsForAccount(filters);
+        logger.info('getProjectedTransactionsForAccount success', {
             personalCount: response?.data?.personalTransactions?.count ?? 0,
             jointCount: response?.data?.jointTransactions?.count ?? 0,
             personalTotal: response?.data?.personalTotal,
@@ -79,94 +83,98 @@ export async function getTransactionsForAccount(params = {}) {
         });
         return response?.data || null;
     } catch (error) {
-        logger.error('getTransactionsForAccount failed', error);
+        logger.error('getProjectedTransactionsForAccount failed', error);
         throw error;
     }
 }
 
 /**
  * Creates a new projected transaction.
+ *
  * @async
- * @function createTransaction
- * @param {Object} transaction - ProjectedTransaction payload.
+ * @function createProjectedTransaction
+ * @param {Object} projectedTransaction - ProjectedTransaction payload.
  * @returns {Promise<Object>} Created projected transaction object.
- * @throws {Error} On request failure.
+ * @throws {Error} If request fails.
  */
-export async function createTransaction(transaction) {
-    logger.info('createTransaction called', {
-        transactionPreview: transaction
-            ? { name: transaction.name, amount: transaction.amount, statementPeriod: transaction.statementPeriod }
+export async function createProjectedTransaction(projectedTransaction) {
+    logger.info('createProjectedTransaction called', {
+        transactionPreview: projectedTransaction
+            ? { name: projectedTransaction.name, amount: projectedTransaction.amount, statementPeriod: projectedTransaction.statementPeriod }
             : null,
     });
     try {
-        const response = await apiClient.createTransaction(transaction);
-        logger.info('createTransaction success', { created: response?.data });
+        const response = await apiClient.createTransaction(projectedTransaction);
+        logger.info('createProjectedTransaction success', { created: response?.data });
         return response?.data || null;
     } catch (error) {
-        logger.error('createTransaction failed', error);
+        logger.error('createProjectedTransaction failed', error);
         throw error;
     }
 }
 
 /**
  * Updates an existing projected transaction.
+ *
  * @async
- * @function updateTransaction
- * @param {number|string} id - Transaction id (required).
- * @param {Object} transaction - Updated transaction payload.
+ * @function updateProjectedTransaction
+ * @param {number|string} projectedTransactionId - The projected transaction ID.
+ * @param {Object} projectedTransaction - The updated projected transaction payload.
  * @returns {Promise<Object>} Updated projected transaction object.
- * @throws {Error} On request failure or if id missing.
+ * @throws {Error} If request fails or ID is missing.
  */
-export async function updateTransaction(id, transaction) {
-    logger.info('updateTransaction called', {
-        id,
-        transactionPreview: transaction ? { name: transaction.name, amount: transaction.amount } : null,
+export async function updateProjectedTransaction(projectedTransactionId, projectedTransaction) {
+    logger.info('updateProjectedTransaction called', {
+        projectedTransactionId,
+        transactionPreview: projectedTransaction ? { name: projectedTransaction.name, amount: projectedTransaction.amount } : null,
     });
     try {
-        const response = await apiClient.updateTransaction(id, transaction);
-        logger.info('updateTransaction success', { updated: response?.data });
+        const response = await apiClient.updateTransaction(projectedTransactionId, projectedTransaction);
+        logger.info('updateProjectedTransaction success', { updated: response?.data });
         return response?.data || null;
     } catch (error) {
-        logger.error('updateTransaction failed', error);
+        logger.error('updateProjectedTransaction failed', error);
         throw error;
     }
 }
 
 /**
- * Deletes a projected transaction by id.
+ * Deletes a projected transaction by ID.
+ *
  * @async
- * @function deleteTransaction
- * @param {number|string} id - Required transaction id.
- * @returns {Promise<Object>} Response.
- * @throws {Error} On request failure or if id missing.
+ * @function deleteProjectedTransaction
+ * @param {number|string} projectedTransactionId - The projected transaction ID.
+ * @returns {Promise<Object>} API response.
+ * @throws {Error} If request fails or ID is missing.
  */
-export async function deleteTransaction(id) {
-    logger.info('deleteTransaction called', { id });
+export async function deleteProjectedTransaction(projectedTransactionId) {
+    logger.info('deleteProjectedTransaction called', { projectedTransactionId });
     try {
-        const response = await apiClient.deleteTransaction(id);
-        logger.info('deleteTransaction success', { status: response?.status });
+        const response = await apiClient.deleteTransaction(projectedTransactionId);
+        logger.info('deleteProjectedTransaction success', { status: response?.status });
         return response?.data || null;
     } catch (error) {
-        logger.error('deleteTransaction failed', error);
+        logger.error('deleteProjectedTransaction failed', error);
         throw error;
     }
 }
 
 /**
  * Deletes all projected transactions.
+ *
  * @async
- * @function deleteAllTransactions
- * @returns {Promise<Object>} Server response, e.g. { deletedCount }
- * @throws {Error} On request failure.
+ * @function deleteAllProjectedTransactions
+ * @returns {Promise<Object>} API response (e.g. { deletedCount })
+ * @throws {Error} If request fails.
  */
-export async function deleteAllTransactions() {
-    logger.info('deleteAllTransactions called');
+export async function deleteAllProjectedTransactions() {
+    logger.info('deleteAllProjectedTransactions called');
     try {
         const response = await apiClient.deleteAllTransactions();
-        logger.info('deleteAllTransactions success', { deletedCount: response?.data?.deletedCount });
+        logger.info('deleteAllProjectedTransactions success', { deletedCount: response?.data?.deletedCount });
         return response?.data || null;
     } catch (error) {
-        logger.error('deleteAllTransactions failed', error);
+        logger.error('deleteAllProjectedTransactions failed', error);
         throw error;
     }
 }

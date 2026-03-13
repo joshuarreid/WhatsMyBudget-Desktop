@@ -3,7 +3,7 @@ const logger = {
     error: (...args) => console.error('[StatementPeriodService]', ...args),
 };
 
-import { getApiClient } from '../api/apiClient';
+import { getApiClient } from '../api/ApiClient';
 
 /**
  * StatementPeriodService

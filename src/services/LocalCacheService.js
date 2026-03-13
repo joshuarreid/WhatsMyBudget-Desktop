@@ -11,7 +11,7 @@ const logger = {
     error: (...args) => console.error('[LocalCacheService]', ...args),
 };
 
-import { getApiClient } from '../api/apiClient';
+import { getApiClient } from '../api/ApiClient';
 
 const RESOURCE = '/api/cache';
 

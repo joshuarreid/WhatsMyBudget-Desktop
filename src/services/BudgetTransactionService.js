@@ -9,7 +9,7 @@ const logger = {
     error: (...args) => console.error('[BudgetTransactionService]', ...args),
 };
 
-import { getApiClient } from '../api/apiClient'; // centralized axios instance
+import { getApiClient } from '../api/ApiClient'; // centralized axios instance
 
 const RESOURCE = '/api/transactions';
 
