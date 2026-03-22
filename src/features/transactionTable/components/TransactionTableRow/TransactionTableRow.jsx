@@ -2,10 +2,7 @@
  * TransactionTableRow.jsx
  *
  * Presentational component that renders a single transaction row.
- * - Projected transactions (tx.__isProjected === true) are visually distinct:
- *   - row receives styles.projectedRow
- *   - name is shown with styles.projectedName and a small projected badge
- *   - amount is shown with styles.projectedAmount
+ * Adds visual indication (red highlight) if the row's category is "Uncategorized" (case-insensitive).
  *
  * Conventions:
  * - UI-only: all business logic lives in hooks (useTransactionRow).
@@ -20,7 +17,6 @@ import PropTypes from "prop-types";
 import { useTransactionRow } from "../../hooks/useTransactionRow";
 import SmartSelect from "../SmartSelect/SmartSelect";
 import TransactionRowInput from "../TransactionRowInput/TransactionRowInput";
-
 import styles from "./TransactionRow.module.css";
 import {
     INLINE_ERROR_COLOR,
@@ -31,31 +27,23 @@ import {
 } from "../../utils/constants";
 import MoneyInput from "../../../../components/MoneyInput/MoneyInput";
 
+/**
+ * Logger for TransactionTableRow.
+ * @constant
+ */
 const logger = {
     info: (...args) => console.log('[TransactionTableRow]', ...args),
     error: (...args) => console.error('[TransactionTableRow]', ...args),
 };
 
 /**
- * TransactionTableRow
- *
- * @param {Object} props
- * @param {Object} props.tx - transaction object
- * @param {boolean} props.selected - whether row is selected
- * @param {Function} props.onSelect - called when checkbox toggles
- * @param {Object} props.editing - editing state from parent hook
- * @param {Object} props.editValueRef - ref for inline edit value
- * @param {Function} props.onCellDoubleClick - handler to enter field edit
- * @param {Function} props.onEditKey - key handler for inline edit
- * @param {Function} props.onSaveEdit - single-field save handler
- * @param {Function} props.onSaveRow - full-row save handler
- * @param {Function} props.onCancelRow - cancel handler
- * @param {Function} props.toInputDate - helper to format date input
- * @param {Function} props.setEditing - setter for editing state
- * @param {Set} props.savingIds - ids currently saving
- * @param {Object} props.saveErrors - save error map
- * @param {Function} props.startEditingRow - start full-row edit
+ * Determines if the category is "Uncategorized" (case-insensitive).
+ * @param {string} category
+ * @returns {boolean}
  */
+const isUncategorized = (category) =>
+    typeof category === "string" && category.trim().toLowerCase() === "uncategorized";
+
 export default function TransactionTableRow({
                                                 tx,
                                                 selected,
@@ -124,7 +112,6 @@ export default function TransactionTableRow({
     });
 
     const inputClass = `${DEFAULT_INPUT_CLASS} ${styles.input}`;
-
     const dateInputRef = React.useRef(null);
 
     const handleOpenNativeDatePicker = (e) => {
@@ -182,13 +169,22 @@ export default function TransactionTableRow({
         }
     };
 
-    // conditional className for projected rows
-    const rowClassName = `${styles.row} ${selected ? styles.rowSelected : ""} ${tx?.__isProjected ? styles.projectedRow : ""}`;
+    // Conditional className for indication (red highlight if Uncategorized).
+    const uncategorized = isRowEditing
+        ? isUncategorized(draft.category)
+        : isUncategorized(tx.category);
+    const rowClassName = [
+        styles.row,
+        selected ? styles.rowSelected : "",
+        tx?.__isProjected ? styles.projectedRow : "",
+        uncategorized ? styles.uncategorizedRow : "",
+    ].filter(Boolean).join(" ");
 
     return (
         <div
             className={rowClassName}
             onDoubleClickCapture={handleRowDoubleClickCapture}
+            data-testid={uncategorized ? "uncategorized-row" : undefined}
         >
             <div className={styles.checkboxCol}>
                 <input

@@ -1,12 +1,9 @@
-/* Scoped styles for TransactionTableRow component (CSS Modules)
- *
- * Notes:
- * - Keep these selectors small and focused to avoid accidental coupling.
- * - Many feature-wide rules (layout grid, header, card) stay in the shared TransactionTable.css.
- * - This module contains the row-specific look & feel: row surface, cells, inputs, and row actions.
- */
+/* =========================
+   TransactionRow.module.css
+   Scoped styles for TransactionTableRow component (CSS Modules)
+   Bulletproof React conventions: keep styles pure, local, and descriptive.
+   ========================= */
 
-/* Root row surface (replaces .tt-row) */
 .row {
     display: grid;
     /* increased the date column slightly (was 120px) to avoid truncation of native date control */
@@ -20,6 +17,7 @@
     align-items: start;
 }
 
+/* Alternating row color (for future use, if needed) */
 .rowOdd {
     background: rgba(255,255,255,0.01);
 }
@@ -30,38 +28,41 @@
     background: rgba(255,255,255,0.03);
 }
 
-/* selected variant (replaces .tt-row-selected) */
+/* Selected variant (replaces .tt-row-selected) */
 .rowSelected {
     box-shadow: inset 0 0 0 1px rgba(156, 197, 255, 0.06);
     background: linear-gradient(180deg, rgba(22,26,32,0.35), rgba(18,22,28,0.35));
 }
 
-/* checkbox column */
+/* === 🚩 Uncategorized indication === */
+.uncategorizedRow {
+    border-left: 3px solid #e53e3e;
+    background: linear-gradient(90deg, rgba(229,62,62,0.10) 0%, transparent 100%);
+}
+
+/* Checkbox column */
 .checkboxCol {
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
-/* generic cell (replaces .tt-cell) */
+/* Generic cell */
 .cell {
     padding: 4px 6px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-
-    /* IMPORTANT: allow grid children to shrink below their content size.
-       Without this, native controls (like date) can be clipped. */
-    min-width: 0;
+    min-width: 0; /* allow shrink below content size (important for grid) */
 }
 
-/* amount cell tweaks */
+/* Amount cell tweaks */
 .amount {
     font-variant-numeric: tabular-nums;
     text-align: right;
 }
 
-/* input styling overrides specific to row inputs (coexists with DEFAULT_INPUT_CLASS) */
+/* Input styling overrides specific to row inputs (coexists with DEFAULT_INPUT_CLASS) */
 .input {
     width: 100%;
     padding: 6px 8px;
@@ -71,37 +72,32 @@
     color: #e6eef8;
     outline: none;
     font-size: 0.85rem;
-
-    /* make sizing predictable when using width:100% inside grid cells */
     box-sizing: border-box;
 }
 
-/* ensure focus looks good even when using module class */
 .input:focus {
     box-shadow: 0 6px 18px rgba(0,0,0,0.6);
     border-color: rgba(120,170,255,0.6);
 }
 
-/* numeric input tweak (keeps text aligned right) */
+/* Numeric input tweak (keeps text aligned right) */
 .inputNumber {
     text-align: right;
 }
 
-/* Small tweak to ensure native date control icon has room and content isn't clipped
-   KEEP original padding-right so we don't change native control/layout */
+/* Date input: make room for native control icon; keep original padding-right */
 .input[type="date"] {
     padding-right: 10px;
 }
 
-/* date input + icon wrapper */
+/* Date input + icon wrapper */
 .dateWrapper {
     position: relative;
     display: flex;
     align-items: center;
 }
 
-/* button to invoke date picker (to the right of the input)
-   absolutely positioned so it does not affect surrounding layout (row controls stay identical) */
+/* Button to invoke date picker (to the right of the input, does not affect layout) */
 .datePickerBtn {
     position: absolute;
     right: 6px;
@@ -127,7 +123,6 @@
     transform: translateY(calc(-50% - 2px));
 }
 
-/* subtle style for the calendar icon (svg inherits color) */
 .calendarIcon {
     width: 16px;
     height: 16px;
@@ -135,7 +130,7 @@
     vertical-align: middle;
 }
 
-/* row-level controls (replaces .tt-row-controls) */
+/* Row-level controls (row-edit mode) */
 .rowControls {
     grid-column: 2 / -1;
     display: flex;
@@ -145,8 +140,7 @@
     align-items: center;
 }
 
-/* action buttons used in row-edit mode (replaces .tt-action-btn)
-   RESTORED to original sizes/spacing so Save/Cancel buttons remain unchanged */
+/* Action buttons used in row-edit mode */
 .actionBtn {
     border: none;
     padding: 8px 14px;
@@ -161,7 +155,6 @@
     gap: 8px;
     transition: transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
 }
-
 .actionBtnHover:hover:not(:disabled) {
     transform: translateY(-2px);
 }
@@ -188,7 +181,7 @@
     box-shadow: 0 6px 14px rgba(125,107,255,0.14);
 }
 
-/* inline saving text and inline error (kept small here so only row needs them) */
+/* Inline saving text and inline error (kept small for only row needs) */
 .savingText {
     margin-left: 8px;
     font-weight: 700;
@@ -240,10 +233,10 @@
    End projected styles
    ========================= */
 
-/* responsive adjustments that mirror the global layout reductions */
+/* Responsive adjustments (mobile) */
 @media (max-width: 900px) {
     .row {
-        /* bumped the date column slightly on mobile */
+        /* Adjust date column size on mobile */
         grid-template-columns: 36px 1fr 100px 120px 90px 120px 90px 120px;
     }
 
