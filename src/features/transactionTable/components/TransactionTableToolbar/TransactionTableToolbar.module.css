@@ -1,9 +1,12 @@
 /* Scoped styles for TransactionTableToolbar component
- *
- * - Migrated from global .tt-toolbar-ynab, .tt-link-btn, .tt-totals etc.
- * - Keeps layout & spacing consistent with feature tokens in TransactionTable.css.
- */
 
+- Migrated from global .tt-toolbar-ynab, .tt-link-btn, .tt-totals etc.
+- Keeps layout & spacing consistent with feature tokens in TransactionTable.css.
+*/
+
+/**
+ * Toolbar wrapper: lays out action buttons, filters, totals.
+ */
 .toolbar {
     display: flex;
     justify-content: space-between;
@@ -25,6 +28,37 @@
     gap: 12px;
 }
 
+/* Payment method filter checkboxes group */
+.filterGroup {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-right: 16px;
+}
+
+/* Checkbox label for payment method filters */
+.filterCheckboxLabel {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 5px;
+    border-radius: 4px;
+    font-size: 0.95em;
+    user-select: none;
+    cursor: pointer;
+}
+
+.filterCheckbox {
+    accent-color: var(--color-accent, #7fb7db);
+    cursor: pointer;
+    margin: 0 3px 0 0;
+}
+
+/* If you want to dim the label for unchecked boxes specifically: */
+.filterCheckboxLabel:has(input:not(:checked)) {
+    opacity: 0.67;
+}
+
 .linkBtn {
     background: transparent;
     border: none;
@@ -36,6 +70,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    transition: background 120ms, transform 120ms;
 }
 
 .linkBtnDisabled {
@@ -43,6 +78,14 @@
     cursor: not-allowed;
 }
 
+.linkBtn:disabled,
+.linkBtn[aria-disabled="true"] {
+    opacity: 0.45;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.linkBtn:hover:not(:disabled):not(.linkBtnDisabled),
 .linkBtnHover:hover:not(.linkBtnDisabled) {
     background: rgba(141,176,255,0.04);
     transform: translateY(-1px);
@@ -55,4 +98,20 @@
 .totals {
     color: var(--color-success);
     font-weight: 800;
+}
+
+/* Responsive adjustment for smaller viewports */
+@media (max-width: 800px) {
+    .toolbar {
+        flex-direction: column;
+        gap: 16px;
+        align-items: stretch;
+    }
+    .left, .right {
+        gap: 12px;
+    }
+    .filterGroup {
+        margin-right: 0;
+        flex-wrap: wrap;
+    }
 }

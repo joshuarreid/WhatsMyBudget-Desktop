@@ -2,16 +2,34 @@
  * TransactionTableRow.jsx
  *
  * Presentational component that renders a single transaction row.
- * Adds visual indication (red highlight) if the row's category is "Uncategorized" (case-insensitive).
+ * - Projected transactions (tx.__isProjected === true) are visually distinct.
+ * - Rows marked as "Uncategorized" (case-insensitive) receive an uncategorizedRow highlight.
+ * - Rows whose payment method is not in the provided activePaymentMethodFilters are greyed out with greyedOutRow.
  *
  * Conventions:
  * - UI-only: all business logic lives in hooks (useTransactionRow).
- * - Robust logging used for lifecycle / interaction tracing.
+ * - Robust logging for lifecycle and interaction tracing.
  *
+ * @module TransactionTableRow
  * @param {Object} props
+ * @param {Object} props.tx - transaction object
+ * @param {boolean} props.selected - whether row is selected
+ * @param {Function} props.onSelect - called when checkbox toggles
+ * @param {Object} props.editing - editing state from parent hook
+ * @param {Object} props.editValueRef - ref for inline edit value
+ * @param {Function} props.onCellDoubleClick - handler to enter field edit
+ * @param {Function} props.onEditKey - key handler for inline edit
+ * @param {Function} props.onSaveEdit - single-field save handler
+ * @param {Function} props.onSaveRow - full-row save handler
+ * @param {Function} props.onCancelRow - cancel handler
+ * @param {Function} props.toInputDate - helper to format date input
+ * @param {Function} props.setEditing - setter for editing state
+ * @param {Set} props.savingIds - ids currently saving
+ * @param {Object} props.saveErrors - save error map
+ * @param {Function} props.startEditingRow - start full-row edit
+ * @param {Set<string>} [props.activePaymentMethodFilters] - set of enabled payment methods (lowercase)
  * @returns {JSX.Element}
  */
-
 import React from "react";
 import PropTypes from "prop-types";
 import { useTransactionRow } from "../../hooks/useTransactionRow";
@@ -44,6 +62,20 @@ const logger = {
 const isUncategorized = (category) =>
     typeof category === "string" && category.trim().toLowerCase() === "uncategorized";
 
+/**
+ * Determines if the payment method for this row is currently filtered out.
+ * @param {string} paymentMethod - the row's payment method (may be undefined or mixed-case)
+ * @param {Set<string>} activeFilters - set of enabled payment methods (all lowercase)
+ * @returns {boolean}
+ */
+const isPaymentMethodFilteredOut = (paymentMethod, activeFilters) =>
+    !!activeFilters &&
+    typeof paymentMethod === "string" &&
+    !activeFilters.has(paymentMethod.toLowerCase());
+
+/**
+ * TransactionTableRow component
+ */
 export default function TransactionTableRow({
                                                 tx,
                                                 selected,
@@ -60,6 +92,7 @@ export default function TransactionTableRow({
                                                 savingIds = new Set(),
                                                 saveErrors = {},
                                                 startEditingRow,
+                                                activePaymentMethodFilters,
                                             }) {
     const {
         isFieldEditing,
@@ -114,6 +147,36 @@ export default function TransactionTableRow({
     const inputClass = `${DEFAULT_INPUT_CLASS} ${styles.input}`;
     const dateInputRef = React.useRef(null);
 
+    // Payment method string for row (use draft.paymentMethod if editing row, else tx.paymentMethod)
+    const pm =
+        isRowEditing && draft && draft.paymentMethod
+            ? draft.paymentMethod
+            : tx.paymentMethod;
+
+    const uncategorized =
+        isRowEditing
+            ? isUncategorized(draft.category)
+            : isUncategorized(tx.category);
+
+    const filteredOut =
+        !!activePaymentMethodFilters &&
+        isPaymentMethodFilteredOut(pm, activePaymentMethodFilters);
+
+    const rowClassName = [
+        styles.row,
+        selected ? styles.rowSelected : "",
+        tx?.__isProjected ? styles.projectedRow : "",
+        uncategorized ? styles.uncategorizedRow : "",
+        filteredOut ? styles.greyedOutRow : "",
+    ]
+        .filter(Boolean)
+        .join(" ");
+
+    /**
+     * Opens the native date picker if possible.
+     * @function
+     * @param {Event} e - React event
+     */
     const handleOpenNativeDatePicker = (e) => {
         e?.stopPropagation?.();
         if (!dateInputRef.current) {
@@ -135,6 +198,11 @@ export default function TransactionTableRow({
         }
     };
 
+    /**
+     * For icon click: open field editor for date.
+     * @function
+     * @param {Event} e - React event
+     */
     const handleOpenEditorFromDisplayIcon = (e) => {
         e?.stopPropagation?.();
         logger.info('date icon clicked to start editing', tx.id);
@@ -168,17 +236,6 @@ export default function TransactionTableRow({
             logger.error('failed to start row edit', err, tx.id);
         }
     };
-
-    // Conditional className for indication (red highlight if Uncategorized).
-    const uncategorized = isRowEditing
-        ? isUncategorized(draft.category)
-        : isUncategorized(tx.category);
-    const rowClassName = [
-        styles.row,
-        selected ? styles.rowSelected : "",
-        tx?.__isProjected ? styles.projectedRow : "",
-        uncategorized ? styles.uncategorizedRow : "",
-    ].filter(Boolean).join(" ");
 
     return (
         <div
@@ -549,4 +606,9 @@ TransactionTableRow.propTypes = {
     savingIds: PropTypes.object,
     saveErrors: PropTypes.object,
     startEditingRow: PropTypes.func.isRequired,
+    /**
+     * Set of payment methods currently enabled.
+     * If provided, rows whose payment method is NOT in the set will be visually greyed out.
+     */
+    activePaymentMethodFilters: PropTypes.instanceOf(Set),
 };

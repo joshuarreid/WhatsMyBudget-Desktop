@@ -6,7 +6,6 @@
 
 .row {
     display: grid;
-    /* increased the date column slightly (was 120px) to avoid truncation of native date control */
     grid-template-columns: 36px 1fr 120px 150px 100px 140px 100px 120px;
     gap: 12px;
     padding: 10px;
@@ -28,16 +27,23 @@
     background: rgba(255,255,255,0.03);
 }
 
-/* Selected variant (replaces .tt-row-selected) */
+/* Selected variant */
 .rowSelected {
     box-shadow: inset 0 0 0 1px rgba(156, 197, 255, 0.06);
     background: linear-gradient(180deg, rgba(22,26,32,0.35), rgba(18,22,28,0.35));
 }
 
-/* === 🚩 Uncategorized indication === */
+/* 🚩 Uncategorized indication */
 .uncategorizedRow {
     border-left: 3px solid #e53e3e;
     background: linear-gradient(90deg, rgba(229,62,62,0.10) 0%, transparent 100%);
+}
+
+/* Greyed-out styling for payment method filtering (washed out) */
+.greyedOutRow {
+    filter: grayscale(0.9) brightness(1.13) opacity(0.63);
+    transition: filter 160ms cubic-bezier(0.5,1,0.89,1.12), opacity 160ms;
+    pointer-events: none; /* disables interaction when filtered */
 }
 
 /* Checkbox column */
@@ -53,7 +59,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    min-width: 0; /* allow shrink below content size (important for grid) */
+    min-width: 0;
 }
 
 /* Amount cell tweaks */
@@ -62,7 +68,7 @@
     text-align: right;
 }
 
-/* Input styling overrides specific to row inputs (coexists with DEFAULT_INPUT_CLASS) */
+/* Row-input styled fields */
 .input {
     width: 100%;
     padding: 6px 8px;
@@ -80,24 +86,20 @@
     border-color: rgba(120,170,255,0.6);
 }
 
-/* Numeric input tweak (keeps text aligned right) */
 .inputNumber {
     text-align: right;
 }
 
-/* Date input: make room for native control icon; keep original padding-right */
 .input[type="date"] {
     padding-right: 10px;
 }
 
-/* Date input + icon wrapper */
 .dateWrapper {
     position: relative;
     display: flex;
     align-items: center;
 }
 
-/* Button to invoke date picker (to the right of the input, does not affect layout) */
 .datePickerBtn {
     position: absolute;
     right: 6px;
@@ -115,7 +117,7 @@
     cursor: pointer;
     color: #e6eef8;
     transition: background 120ms ease, transform 120ms ease;
-    z-index: 2; /* ensure icon sits above the input */
+    z-index: 2;
 }
 
 .datePickerBtn:hover:not(:disabled) {
@@ -130,7 +132,7 @@
     vertical-align: middle;
 }
 
-/* Row-level controls (row-edit mode) */
+/* Row-level controls (edit mode) */
 .rowControls {
     grid-column: 2 / -1;
     display: flex;
@@ -140,7 +142,6 @@
     align-items: center;
 }
 
-/* Action buttons used in row-edit mode */
 .actionBtn {
     border: none;
     padding: 8px 14px;
@@ -159,7 +160,6 @@
     transform: translateY(-2px);
 }
 
-/* Outline (Cancel) */
 .actionOutline {
     background: transparent;
     color: #e6eef8;
@@ -167,21 +167,18 @@
     box-shadow: none;
 }
 
-/* Primary filled (Save) */
 .actionPrimary {
     background: linear-gradient(180deg, #5b4cff, #6e58ff);
     color: white;
     box-shadow: 0 6px 14px rgba(88, 71, 255, 0.18);
 }
 
-/* Ghost/secondary primary (Save and add another) */
 .actionGhost {
     background: linear-gradient(180deg, #6c5bff, #7d6bff);
     color: white;
     box-shadow: 0 6px 14px rgba(125,107,255,0.14);
 }
 
-/* Inline saving text and inline error (kept small for only row needs) */
 .savingText {
     margin-left: 8px;
     font-weight: 700;
@@ -198,34 +195,30 @@
    Projected transaction styles (added)
    ========================= */
 
-/* Projected row: subtle left border and muted background */
 .projectedRow {
-    background: rgba(99, 102, 241, 0.03); /* subtle indigo tint */
+    background: rgba(99, 102, 241, 0.03);
     border-left: 3px solid rgba(99, 102, 241, 0.22);
 }
 
-/* Projected name appearance (slightly muted / italic) */
 .projectedName {
-    color: #374151; /* neutral-700 */
+    color: #374151;
     font-style: italic;
     opacity: 0.95;
 }
 
-/* Small badge shown next to name for projected transactions */
 .projectedBadge {
     margin-left: 8px;
     padding: 2px 6px;
     background: rgba(99, 102, 241, 0.12);
-    color: #4f46e5; /* indigo-600 */
+    color: #4f46e5;
     border-radius: 999px;
     font-size: 0.72rem;
     font-weight: 700;
     vertical-align: middle;
 }
 
-/* Projected amount: muted color to visually separate from confirmed amounts */
 .projectedAmount {
-    color: #6b7280; /* neutral-500 */
+    color: #6b7280;
     opacity: 0.95;
 }
 
@@ -233,32 +226,26 @@
    End projected styles
    ========================= */
 
-/* Responsive adjustments (mobile) */
+/* Responsive adjustment for smaller screens */
 @media (max-width: 900px) {
     .row {
-        /* Adjust date column size on mobile */
         grid-template-columns: 36px 1fr 100px 120px 90px 120px 90px 120px;
     }
-
     .actionBtn {
         padding: 6px 10px;
         min-height: 32px;
     }
-
     .savingText {
         margin-left: 6px;
     }
-
     .input[type="date"] {
         padding-right: 10px;
     }
-
     .datePickerBtn {
         right: 4px;
         height: 26px;
         width: 26px;
     }
-
     .calendarIcon {
         width: 14px;
         height: 14px;
