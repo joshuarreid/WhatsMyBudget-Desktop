@@ -6,12 +6,22 @@
  * @module config
  */
 
+/**
+ * Standardized logger for config module.
+ * @constant
+ */
 const logger = {
-    info: (...args) => console.log('[Config]', ...args),
-    error: (...args) => console.error('[Config]', ...args),
+    info: (...args) => console.log('[config]', ...args),
+    error: (...args) => console.error('[config]', ...args),
 };
 
-// Helper to get env variable (Electron: process.env, React: import.meta.env or process.env)
+/**
+ * Helper to safely get env variable from possible locations.
+ * @function getEnv
+ * @param {string} key
+ * @param {any} fallback
+ * @returns {any}
+ */
 function getEnv(key, fallback) {
     if (typeof process !== 'undefined' && process.env && process.env[key] !== undefined) {
         return process.env[key];
@@ -25,7 +35,13 @@ function getEnv(key, fallback) {
     return fallback;
 }
 
-// Parse helpers
+/**
+ * Parse and return JSON from env variable.
+ * @function parseJSONEnv
+ * @param {string} key
+ * @param {any} fallback
+ * @returns {any}
+ */
 function parseJSONEnv(key, fallback) {
     try {
         const val = getEnv(key);
@@ -35,13 +51,24 @@ function parseJSONEnv(key, fallback) {
         return fallback;
     }
 }
+
+/**
+ * Parse and return string-array from env variable.
+ * @function parseArrayEnv
+ * @param {string} key
+ * @param {any} fallback
+ * @returns {string[]}
+ */
 function parseArrayEnv(key, fallback) {
     const val = getEnv(key);
     if (!val) return fallback;
     return val.split(',').map(s => s.trim()).filter(Boolean);
 }
 
-// Config object from env
+/**
+ * Central application config object, merged from env variables.
+ * @constant
+ */
 const mergedConfig = {
     baseUrl: getEnv('REACT_APP_BASE_URL', getEnv('BASE_URL', '')),
     defaultHeaders: parseJSONEnv('REACT_APP_DEFAULT_HEADERS', parseJSONEnv('DEFAULT_HEADERS', {"Content-Type":"application/json"})),
@@ -69,18 +96,16 @@ const mergedConfig = {
     accounts: parseArrayEnv('REACT_APP_ACCOUNTS', parseArrayEnv('ACCOUNTS', [])),
     defaultCriticalityMap: parseJSONEnv('REACT_APP_DEFAULT_CRITICALITY_MAP', parseJSONEnv('DEFAULT_CRITICALITY_MAP', {})),
     defaultPaymentMethodMap: parseJSONEnv('REACT_APP_DEFAULT_PAYMENT_METHOD_MAP', parseJSONEnv('DEFAULT_PAYMENT_METHOD_MAP', {})),
+    /** @type {Record<string, string>} Bank for payment method mappings (e.g., {Sapphire: "Chase", Amex: "Amex"}) */
+    bankPaymentMethodMap: parseJSONEnv('REACT_BANK_PAYMENT_METHOD_MAP', {}),
 };
 
-
-
 /**
- * Safe dot-path getter.
- * Example: get('user1.name', 'Default Name')
+ * Returns the value at the specified dot path in config with fallback.
  * @function get
- * @template T
  * @param {string} path
- * @param {T} [fallback]
- * @returns {T|undefined}
+ * @param {any} [fallback]
+ * @returns {any}
  */
 export function get(path, fallback) {
     if (!path) return fallback;
@@ -166,30 +191,6 @@ export function getAccounts() {
 }
 
 /**
- * Returns the criticality map from config.
- * @function getCriticalityMap
- * @returns {Record<string, string>}
- */
-export function getCriticalityMap() {
-    try {
-        const val = mergedConfig.defaultCriticalityMap;
-        if (val && typeof val === 'object' && !Array.isArray(val)) {
-            const out = {};
-            for (const [k, v] of Object.entries(val)) {
-                if (typeof v === 'string' ) out[k] = v;
-            }
-            logger.info('getCriticalityMap', { count: Object.keys(out).length, sample: Object.entries(out).slice(0, 5) });
-            return out;
-        }
-        logger.info('getCriticalityMap: missing or invalid; returning empty map');
-        return {};
-    } catch (err) {
-        logger.error('getCriticalityMap failed', err);
-        return {};
-    }
-}
-
-/**
  * Returns criticality for a given category, or fallback.
  * @function getCriticalityForCategory
  * @param {string} [category]
@@ -227,6 +228,30 @@ export function getCriticalityForCategory(category) {
 }
 
 /**
+ * Returns the criticality map from config.
+ * @function getCriticalityMap
+ * @returns {Record<string, string>}
+ */
+export function getCriticalityMap() {
+    try {
+        const val = mergedConfig.defaultCriticalityMap;
+        if (val && typeof val === 'object' && !Array.isArray(val)) {
+            const out = {};
+            for (const [k, v] of Object.entries(val)) {
+                if (typeof v === 'string') out[k] = v;
+            }
+            logger.info('getCriticalityMap', { count: Object.keys(out).length, sample: Object.entries(out).slice(0, 5) });
+            return out;
+        }
+        logger.info('getCriticalityMap: missing or invalid; returning empty map');
+        return {};
+    } catch (err) {
+        logger.error('getCriticalityMap failed', err);
+        return {};
+    }
+}
+
+/**
  * Returns the default payment method map from config.
  * @function getDefaultPaymentMethodMap
  * @returns {Record<string, string>}
@@ -237,7 +262,7 @@ export function getDefaultPaymentMethodMap() {
         if (val && typeof val === 'object' && !Array.isArray(val)) {
             const out = {};
             for (const [k, v] of Object.entries(val)) {
-                if (typeof v === 'string' ) out[k] = v;
+                if (typeof v === 'string') out[k] = v;
             }
             logger.info('getDefaultPaymentMethodMap', { count: Object.keys(out).length, sample: Object.entries(out).slice(0, 5) });
             return out;
@@ -251,9 +276,52 @@ export function getDefaultPaymentMethodMap() {
 }
 
 /**
- * Resolve a given account identifier (e.g., "josh", "anna", "joint") to a user key in config
- * (user1, user2, joint) by matching against each user object's `filter` or `name`.
- * Returns the matching user key string or undefined.
+ * Returns a mapping of payment method => bank.
+ * @function getBankPaymentMethodMap
+ * @returns {Record<string, string>}
+ */
+export function getBankPaymentMethodMap() {
+    try {
+        const val = mergedConfig.bankPaymentMethodMap;
+        if (val && typeof val === 'object' && !Array.isArray(val)) {
+            logger.info('getBankPaymentMethodMap', { map: val });
+            return val;
+        }
+        logger.info('getBankPaymentMethodMap: missing or invalid; returning empty map');
+        return {};
+    } catch (err) {
+        logger.error('getBankPaymentMethodMap failed', err);
+        return {};
+    }
+}
+
+/**
+ * Given a payment method, return the most likely default bank (from config mapping).
+ * @function getBankForPaymentMethod
+ * @param {string} paymentMethod
+ * @returns {string|undefined}
+ */
+export function getBankForPaymentMethod(paymentMethod) {
+    try {
+        if (!paymentMethod) return undefined;
+        const map = getBankPaymentMethodMap();
+        // exact match
+        if (map[paymentMethod]) return map[paymentMethod];
+        // case-insensitive match
+        const key = Object.keys(map).find(
+            (k) => k.toLowerCase() === paymentMethod.toLowerCase()
+        );
+        if (key) return map[key];
+        logger.info('getBankForPaymentMethod: no mapping found for', paymentMethod);
+        return undefined;
+    } catch (err) {
+        logger.error('getBankForPaymentMethod failed', err);
+        return undefined;
+    }
+}
+
+/**
+ * Resolves a given account identifier (e.g., "josh", "anna", "joint") to a user key in config.
  * @function resolveAccountToUserKey
  * @param {string} [account]
  * @returns {string|undefined}
@@ -282,13 +350,7 @@ function resolveAccountToUserKey(account) {
 }
 
 /**
- * Given an account identifier (e.g., "josh", "anna", "joint"), return the default payment
- * method for that account. Resolution steps:
- * 1. Try to resolve account -> user key (user1/user2/joint) and use that user's paymentMethod
- *    if configured (user1.paymentMethod etc).
- * 2. Fallback to defaultPaymentMethodMap[account] if present.
- * 3. Fallback to first configured payment method (paymentMethods[0]) if available.
- * 4. Otherwise return undefined.
+ * Given an account identifier, return the default payment method for that account (user-mapping, custom map, or fallback).
  * @function getDefaultPaymentMethodForAccount
  * @param {string} [account]
  * @returns {string|undefined}
@@ -336,13 +398,8 @@ export function getDefaultPaymentMethodForAccount(account) {
     }
 }
 
-/**
- * Default export: live merged config object.
- * Use destructuring with defaults in consumers if you want fallbacks:
- *   import config, { getDefaultPaymentMethodForAccount } from 'src/config/config';
- *   const defaultPM = getDefaultPaymentMethodForAccount('josh'); // -> "Freedom"
- */
 export default mergedConfig;
 
-logger.info('REACT_APP env dump', Object.keys(process.env).filter(k => k.startsWith('REACT_APP_')).reduce((acc, k) => { acc[k] = process.env[k]; return acc; }, {}));
+// Diagnostics for debug startup
+logger.info('REACT_APP env dump', Object.keys(process.env || {}).filter(k => k.startsWith('REACT_APP_')).reduce((acc, k) => { acc[k] = process.env[k]; return acc; }, {}));
 logger.info('config.js: baseUrl at startup', { baseUrl: mergedConfig.baseUrl });

@@ -1,25 +1,38 @@
 import React, { useState, useEffect, useRef } from "react";
 import PropTypes from "prop-types";
 import styles from "./TransactionFileImportModal.module.css";
-import { getAccounts, getPaymentMethods } from "../../../../config/config";
+import {
+    getAccounts,
+    getPaymentMethods,
+    getDefaultPaymentMethodForAccount,
+    getBankForPaymentMethod
+} from "../../../../config/config";
 import { generateOptions } from "../../../../services/StatementPeriodService";
 
+/**
+ * Logger for TransactionFileImportModal.
+ * @constant
+ */
 const logger = {
     info: (...args) => console.log('[TransactionFileImportModal]', ...args),
     error: (...args) => console.error('[TransactionFileImportModal]', ...args),
 };
 
 /**
+ * TransactionFileImportModal
  * Modal for confirming and inputting import details before uploading transactions.
+ * Implements proper "chain-reaction": account → paymentMethod → bank.
  *
- * Props:
- * - open: modal open state
- * - initialAccount: default/pre-filled account value
- * - initialPeriod: default/pre-filled statement period value
- * - initialBank: default/pre-filled bank value
- * - file: file to import
- * - onClose: called when modal closes
- * - onConfirm: called with ({account, statementPeriod, bank, paymentMethod, file}) on import confirmation
+ * @component
+ * @param {Object} props
+ * @param {boolean} props.open - Modal open state
+ * @param {string} props.initialAccount - Default/pre-filled account value
+ * @param {string} props.initialPeriod - Default/pre-filled statement period value
+ * @param {string} props.initialBank - Default/pre-filled bank value
+ * @param {File|null} props.file - File to import
+ * @param {Function} props.onClose - Called when modal closes
+ * @param {Function} props.onConfirm - Called with ({account, statementPeriod, bank, paymentMethod, file}) on import confirmation
+ * @returns {JSX.Element|null}
  */
 export default function TransactionFileImportModal({
                                                        open,
@@ -30,38 +43,71 @@ export default function TransactionFileImportModal({
                                                        onClose,
                                                        onConfirm
                                                    }) {
-    // Get dropdown options from config/services
     const accountOptions = getAccounts() || [];
     const paymentMethodOptions = getPaymentMethods() || [];
     const periodOptions = generateOptions();
 
-    // Local state for fields
+    // Local state (bank is NOT changed on account - only by paymentMethod updates)
     const [account, setAccount] = useState(initialAccount || (accountOptions[0] || ""));
     const [statementPeriod, setStatementPeriod] = useState(initialPeriod || (periodOptions[0]?.value || ""));
-    const [bank, setBank] = useState(initialBank || "");
-    const [paymentMethod, setPaymentMethod] = useState(paymentMethodOptions[0] || "");
+    const [paymentMethod, setPaymentMethod] = useState(
+        getDefaultPaymentMethodForAccount(initialAccount) ||
+        paymentMethodOptions[0] ||
+        ""
+    );
+    const [bank, setBank] = useState(""); // Always updated by paymentMethod effect only!
     const [inProgress, setInProgress] = useState(false);
     const [error, setError] = useState("");
 
-    // Only reset form fields when opening the modal from closed state
+    // On opening modal: set all fields, but DO NOT set bank directly (let paymentMethod effect trigger it)
     const prevOpen = useRef(open);
     useEffect(() => {
         if (open && !prevOpen.current) {
-            logger.info('TransactionFileImportModal opened', {
+            logger.info('Modal opened', {
                 initialAccount, initialPeriod, initialBank, file: file?.name,
                 accountOptions, periodOptions, paymentMethodOptions
             });
-            setAccount(initialAccount || (accountOptions[0] || ""));
+            const startAccount = initialAccount || (accountOptions[0] || "");
+            setAccount(startAccount);
+
             const defaultPeriod = (initialPeriod && periodOptions.find(p => p.value === initialPeriod))
                 ? initialPeriod
                 : (periodOptions[0]?.value || "");
             setStatementPeriod(defaultPeriod);
-            setBank(initialBank || "");
-            setPaymentMethod(paymentMethodOptions[0] || "");
+
+            // This will trigger the chain by setting account → payment method
+            const startMethod = getDefaultPaymentMethodForAccount(startAccount) ||
+                paymentMethodOptions[0] ||
+                "";
+            setPaymentMethod(startMethod);
+
+            // DO NOT setBank here; let it be triggered by paymentMethod effect after payment method changes.
         }
         prevOpen.current = open;
-        // DO NOT reset when options arrays change!
+        // eslint-disable-next-line
     }, [open, initialAccount, initialPeriod, initialBank, file]);
+
+    /**
+     * Updates payment method whenever account changes.
+     * Bank will auto-update by below effect on payment method change.
+     */
+    useEffect(() => {
+        const pm = getDefaultPaymentMethodForAccount(account) || paymentMethodOptions[0] || "";
+        setPaymentMethod(pm);
+        logger.info('Payment method auto-set for account change:', account, pm);
+        // bank will be set in paymentMethod useEffect
+        // eslint-disable-next-line
+    }, [account]);
+
+    /**
+     * Updates bank automatically whenever payment method changes.
+     */
+    useEffect(() => {
+        const bk = getBankForPaymentMethod(paymentMethod) || "";
+        setBank(bk);
+        logger.info('Bank auto-set for payment method change:', paymentMethod, bk);
+        // eslint-disable-next-line
+    }, [paymentMethod]);
 
     if (!open) return null;
 
@@ -69,16 +115,22 @@ export default function TransactionFileImportModal({
     const disabledPeriod = periodOptions.length === 0;
     const disabledPaymentMethod = paymentMethodOptions.length === 0;
 
-    if (disabledAccount) logger.error("No account options available for dropdown!");
-    if (disabledPeriod) logger.error("No statement period options available for dropdown!");
-    if (disabledPaymentMethod) logger.error("No payment method options available for dropdown!");
+    if (disabledAccount) logger.error("No account options for dropdown!");
+    if (disabledPeriod) logger.error("No statement period options for dropdown!");
+    if (disabledPaymentMethod) logger.error("No payment method options for dropdown!");
 
+    /**
+     * Handles form submit.
+     * @function
+     * @param {React.FormEvent} e
+     * @returns {Promise<void>}
+     */
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError("");
         if (!account || !statementPeriod || !bank || !file) {
             setError("All fields and a file are required.");
-            logger.error('TransactionFileImportModal: Validation failed', { account, statementPeriod, bank, paymentMethod, file });
+            logger.error('Validation failed', { account, statementPeriod, bank, paymentMethod, file });
             return;
         }
         setInProgress(true);
@@ -86,7 +138,7 @@ export default function TransactionFileImportModal({
             onConfirm({ account, statementPeriod, bank, paymentMethod, file });
         } catch (err) {
             setError(err.message || "Import failed");
-            logger.error('TransactionFileImportModal: Import exception', err);
+            logger.error('Import exception', err);
         } finally {
             setInProgress(false);
         }
@@ -135,7 +187,7 @@ export default function TransactionFileImportModal({
                         </select>
                     </label>
                     <label>
-                        Payment Method (optional)
+                        Payment Method
                         <select
                             value={paymentMethod}
                             onChange={e => setPaymentMethod(e.target.value)}
