@@ -1,3 +1,16 @@
+/**
+ * TransactionTableToolbar
+ * Presentational toolbar for transaction actions and payment method filters.
+ * Uses Bulletproof React conventions: UI only, logic in hooks.
+ *
+ * @module TransactionTableToolbar
+ * @param {Object} props
+ * @param {Object} props.toolbar - toolbar logic object from useTransactionToolbar
+ * @param {Array<string>} props.paymentMethods - All payment method keys
+ * @param {Object} props.activePaymentMethodFilters - Set<String> of currently enabled payment methods
+ * @param {Function} props.onPaymentMethodFilterChange - (new Set) => void, handles toggling a method
+ * @returns {JSX.Element}
+ */
 import React, { useMemo } from "react";
 import PropTypes from "prop-types";
 import styles from "./TransactionTableToolbar.module.css";
@@ -13,18 +26,6 @@ const logger = {
     error: (...args) => console.error("[TransactionTableToolbar]", ...args),
 };
 
-/**
- * TransactionTableToolbar
- * Presentational toolbar for transaction actions and payment method filters.
- * Uses Bulletproof React conventions: UI only, logic in hooks.
- *
- * @param {Object} props
- * @param {Object} props.toolbar - toolbar logic object from useTransactionToolbar
- * @param {Array<string>} props.paymentMethods - All payment method keys
- * @param {Object} props.activePaymentMethodFilters - Set<String> of currently enabled payment methods
- * @param {Function} props.onPaymentMethodFilterChange - (new Set) => void, handles toggling a method
- * @returns {JSX.Element}
- */
 export default function TransactionTableToolbar({
                                                     toolbar,
                                                     paymentMethods,
@@ -38,6 +39,11 @@ export default function TransactionTableToolbar({
         activePaymentMethodFilters: Array.from(activePaymentMethodFilters || []),
     });
 
+    /**
+     * Handles toggling a payment method filter.
+     * @param {string} paymentMethod
+     * @returns {function(Event): void}
+     */
     const handleCheckboxChange = (paymentMethod) => (e) => {
         // Use a new Set to avoid mutation bugs for React state usage:
         const newSet = new Set(activePaymentMethodFilters);
@@ -49,7 +55,9 @@ export default function TransactionTableToolbar({
         onPaymentMethodFilterChange(newSet);
     };
 
-    // Memo render of payment method filter checkboxes
+    /**
+     * Renders the payment method filter checkboxes.
+     */
     const filters = useMemo(() => (
         <div className={styles.filterGroup} role="group" aria-label="Payment method filters">
             {paymentMethods.map((method) => (
@@ -69,7 +77,6 @@ export default function TransactionTableToolbar({
     return (
         <div className={styles.toolbar} role="toolbar" aria-label="Transaction actions">
             <div className={styles.left}>
-                {filters}
                 <button
                     className={styles.linkBtn}
                     onClick={toolbar.handleAdd}
@@ -106,6 +113,10 @@ export default function TransactionTableToolbar({
                     <span className={styles.icon}>🗑️</span> Delete Selected
                 </button>
                 <StatementPeriodDropdown />
+            </div>
+            {/* Place payment method filters to the right of main action controls but before total */}
+            <div className={styles.center}>
+                {filters}
             </div>
             <div className={styles.right}>
                 <div className={styles.totals}>Total: {toolbar.total}</div>

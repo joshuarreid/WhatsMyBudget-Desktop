@@ -1,8 +1,10 @@
-/* =========================
-   TransactionRow.module.css
-   Scoped styles for TransactionTableRow component (CSS Modules)
-   Bulletproof React conventions: keep styles pure, local, and descriptive.
-   ========================= */
+/* TransactionRow.module.css
+ * Scoped styles for TransactionTableRow component (CSS Modules)
+ * Bulletproof React conventions: keep styles pure, local, and descriptive.
+ *
+ * Improvements:
+ *  - More pronounced (striking) visual wash/grey-out for filtered rows.
+ */
 
 .row {
     display: grid;
@@ -36,14 +38,26 @@
 /* 🚩 Uncategorized indication */
 .uncategorizedRow {
     border-left: 3px solid #e53e3e;
-    background: linear-gradient(90deg, rgba(229,62,62,0.10) 0%, transparent 100%);
+    background: linear-gradient(90deg, rgba(229,62,62,0.13) 0%, transparent 100%);
 }
 
-/* Greyed-out styling for payment method filtering (washed out) */
+/* More pronounced greyed-out styling for payment method filter */
 .greyedOutRow {
-    filter: grayscale(0.9) brightness(1.13) opacity(0.63);
-    transition: filter 160ms cubic-bezier(0.5,1,0.89,1.12), opacity 160ms;
-    pointer-events: none; /* disables interaction when filtered */
+    /* dark, nearly opaque, overlay with diagonal lines for easily scanned differentiation */
+    background:
+            repeating-linear-gradient(
+                    135deg,
+                    #30313d 0px,
+                    #30313d 6px,
+                    #34343f 12px,
+                    #2a2b30 18px
+            ),
+            linear-gradient(90deg,#23242A 0%, #2b2d33 100%);
+    opacity: 0.22 !important;
+    filter: grayscale(1) brightness(1.4) blur(0.6px) contrast(0.82) !important;
+    border-left: 5px solid #606068 !important;
+    pointer-events: none;
+    transition: all 160ms cubic-bezier(0.5,1,0.89,1.12), opacity 160ms, filter 160ms, border 120ms;
 }
 
 /* Checkbox column */
