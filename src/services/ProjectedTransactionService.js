@@ -18,6 +18,25 @@ import { getApiClient } from '../lib/apiClient';
 
 const RESOURCE = '/api/projections';
 
+const CRITICALITY_ID_BY_NAME = {
+    essential: 1,
+    nonessential: 2,
+    planned: 3,
+};
+
+function toWritePayload(transaction = {}) {
+    const payload = { ...(transaction || {}) };
+    if ((payload.criticality_id == null || payload.criticality_id === '') && payload.criticality != null) {
+        const mappedId = CRITICALITY_ID_BY_NAME[String(payload.criticality).trim().toLowerCase()];
+        if (mappedId != null) payload.criticality_id = mappedId;
+    }
+    if (payload.criticality_id != null && payload.criticality_id !== '') {
+        payload.criticality_id = Number(payload.criticality_id);
+    }
+    delete payload.criticality;
+    return payload;
+}
+
 const projectedTransactionService = {
     /**
      * GET /api/projections
@@ -129,7 +148,7 @@ const projectedTransactionService = {
         try {
             const config = transactionId ? { headers: { 'X-Transaction-ID': transactionId } } : undefined;
             const apiClient = await getApiClient();
-            const response = await apiClient.post(RESOURCE, transaction, config);
+            const response = await apiClient.post(RESOURCE, toWritePayload(transaction), config);
             logger.info('createTransaction success', { created: response.data });
             return response.data;
         } catch (err) {
@@ -157,7 +176,7 @@ const projectedTransactionService = {
         try {
             const config = transactionId ? { headers: { 'X-Transaction-ID': transactionId } } : undefined;
             const apiClient = await getApiClient();
-            const response = await apiClient.put(`${RESOURCE}/${encodeURIComponent(id)}`, transaction, config);
+            const response = await apiClient.put(`${RESOURCE}/${encodeURIComponent(id)}`, toWritePayload(transaction), config);
             logger.info('updateTransaction success', { updated: response.data });
             return response.data;
         } catch (err) {

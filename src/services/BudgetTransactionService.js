@@ -13,6 +13,25 @@ import { getApiClient } from '../lib/apiClient'; // centralized axios instance
 
 const RESOURCE = '/api/transactions';
 
+const CRITICALITY_ID_BY_NAME = {
+    essential: 1,
+    nonessential: 2,
+    planned: 3,
+};
+
+function toWritePayload(transaction = {}) {
+    const payload = { ...(transaction || {}) };
+    if ((payload.criticality_id == null || payload.criticality_id === '') && payload.criticality != null) {
+        const mappedId = CRITICALITY_ID_BY_NAME[String(payload.criticality).trim().toLowerCase()];
+        if (mappedId != null) payload.criticality_id = mappedId;
+    }
+    if (payload.criticality_id != null && payload.criticality_id !== '') {
+        payload.criticality_id = Number(payload.criticality_id);
+    }
+    delete payload.criticality;
+    return payload;
+}
+
 const budgetTransactionService = {
     /**
      * GET /api/transactions (list, with optional filters)
@@ -59,7 +78,7 @@ const budgetTransactionService = {
         logger.info('createTransaction entry', { transaction });
         try {
             const apiClient = await getApiClient();
-            const response = await apiClient.post(RESOURCE, transaction);
+            const response = await apiClient.post(RESOURCE, toWritePayload(transaction));
             logger.info('createTransaction success', { created: response.data });
             return response.data;
         } catch (err) {
@@ -76,7 +95,7 @@ const budgetTransactionService = {
         if (!id) throw new Error('Transaction ID required');
         try {
             const apiClient = await getApiClient();
-            const response = await apiClient.put(`${RESOURCE}/${encodeURIComponent(id)}`, transaction);
+            const response = await apiClient.put(`${RESOURCE}/${encodeURIComponent(id)}`, toWritePayload(transaction));
             logger.info('updateTransaction success', { updated: response.data });
             return response.data;
         } catch (err) {

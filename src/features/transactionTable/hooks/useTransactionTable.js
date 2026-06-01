@@ -597,6 +597,8 @@ export function useTransactionTable(filters) {
         delete copy.id;
         delete copy.__isNew;
         delete copy.__isProjected;
+        // Migrate writes to criticality_id-only payloads.
+        delete copy.criticality;
         return copy;
     }, []);
     /**
