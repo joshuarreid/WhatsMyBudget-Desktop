@@ -42,6 +42,7 @@ import {
     DEFAULT_INPUT_CLASS,
     DEFAULT_LOCALE,
     DEFAULT_CURRENCY,
+    criticalityNameToId,
 } from "../../utils/constants";
 import MoneyInput from "../../../../components/MoneyInput/MoneyInput";
 
@@ -365,7 +366,10 @@ export default function TransactionTableRow({
                         onChange={(v) => {
                             updateDraft('category', v);
                             const mapped = getCriticalityForCategory(v);
-                            if (mapped) updateDraft('criticality', mapped);
+                            if (mapped) {
+                                updateDraft('criticality', mapped);
+                                updateDraft('criticality_id', criticalityNameToId(mapped) ?? null);
+                            }
                         }}
                         onSelectImmediate={handleSelectCategoryForRow}
                         onBlur={handleCategoryBlurForRow}
@@ -398,7 +402,11 @@ export default function TransactionTableRow({
                     <select
                         className={inputClass}
                         value={draft.criticality ?? ''}
-                        onChange={(e) => updateDraft('criticality', e.target.value)}
+                        onChange={(e) => {
+                            const nextValue = e.target.value;
+                            updateDraft('criticality', nextValue);
+                            updateDraft('criticality_id', criticalityNameToId(nextValue) ?? null);
+                        }}
                         onKeyDown={(e) => {
                             if (e.key === 'Enter') onSaveRowClick();
                             if (e.key === 'Escape') onCancelRowLocal();

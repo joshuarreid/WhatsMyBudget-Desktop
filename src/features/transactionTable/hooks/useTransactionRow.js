@@ -30,6 +30,9 @@ import {
     MAX_AUTOCOMPLETE_SUGGESTIONS,
     BLUR_DELAY_MS,
     INPUT_DATE_LENGTH,
+    DEFAULT_CRITICALITY_ID,
+    criticalityNameToId,
+    normalizeCriticalityPair,
 } from '../utils/constants';
 import SmartSelect from '../components/SmartSelect/SmartSelect';
 
@@ -40,7 +43,10 @@ import SmartSelect from '../components/SmartSelect/SmartSelect';
 const CRITICALITY_OPTIONS = (() => {
     try {
         const cfg = getConfig(CONFIG_KEYS.CRITICALITY_OPTIONS);
-        if (Array.isArray(cfg) && cfg.length > 0) return cfg.map(String);
+        if (Array.isArray(cfg) && cfg.length > 0) {
+            const normalized = cfg.map(String);
+            return normalized.includes('Planned') ? normalized : [...normalized, 'Planned'];
+        }
         logger.info('useTransactionRow: criticalityOptions not found; using defaults', { fallback: DEFAULT_CRITICALITY_OPTIONS });
         return DEFAULT_CRITICALITY_OPTIONS;
     } catch (err) {
@@ -50,6 +56,7 @@ const CRITICALITY_OPTIONS = (() => {
 })();
 
 const DEFAULT_CRIT = DEFAULT_CRITICALITY || (CRITICALITY_OPTIONS[0] || "Essential");
+const DEFAULT_CRIT_ID = criticalityNameToId(DEFAULT_CRIT) || DEFAULT_CRITICALITY_ID;
 
 /**
  * useTransactionRow
@@ -150,9 +157,10 @@ export function useTransactionRow({
             if (tx?.__isNew) {
                 // DO NOT auto-apply mapped criticality on init for new rows.
                 const derivedPM = getDefaultPaymentMethodForAccount(tx.account) || tx.paymentMethod || '';
-                setDraft({ ...tx, category: tx.category ?? '', criticality: tx.criticality ?? '', paymentMethod: derivedPM });
+                const normalizedCrit = normalizeCriticalityPair(tx, CRITICALITY_OPTIONS);
+                setDraft({ ...tx, category: tx.category ?? '', ...normalizedCrit, paymentMethod: derivedPM });
             } else {
-                setDraft({ ...tx });
+                setDraft({ ...tx, ...normalizeCriticalityPair(tx, CRITICALITY_OPTIONS) });
             }
         }
     }, [tx.id, tx, isRowEditing]);
@@ -221,6 +229,7 @@ export function useTransactionRow({
             if (mapped) {
                 logger.info('mapped criticality applied (row)', { txId: tx.id, category: value, criticality: mapped });
                 updateDraft('criticality', mapped);
+                updateDraft('criticality_id', criticalityNameToId(mapped) || DEFAULT_CRIT_ID);
             }
         } catch (err) {
             logger.error('handleSelectCategoryForRow failed', err);
@@ -323,6 +332,7 @@ export function useTransactionRow({
                     if (mapped && mapped !== draft.criticality) {
                         logger.info('apply mapped criticality on blur (row)', { txId: tx.id, category: categoryVal, criticality: mapped });
                         updateDraft('criticality', mapped);
+                        updateDraft('criticality_id', criticalityNameToId(mapped) || DEFAULT_CRIT_ID);
                     }
                 }
             } catch (err) {
@@ -428,13 +438,16 @@ export function useTransactionRow({
         if (normalized.transactionDate && normalized.transactionDate.length === INPUT_DATE_LENGTH) {
             normalized.transactionDate = new Date(normalized.transactionDate).toISOString();
         }
-        const s = normalized.criticality;
-        if (s == null || String(s).trim() === '') {
-            normalized.criticality = DEFAULT_CRIT;
-        } else {
-            const exact = CRITICALITY_OPTIONS.find((o) => String(o).toLowerCase() === String(s).toLowerCase());
-            normalized.criticality = exact || DEFAULT_CRIT;
-        }
+        const normalizedCriticality = normalizeCriticalityPair(
+            {
+                ...normalized,
+                criticality: normalized.criticality,
+                criticality_id: normalized.criticality_id,
+            },
+            CRITICALITY_OPTIONS
+        );
+        normalized.criticality = normalizedCriticality.criticality || DEFAULT_CRIT;
+        normalized.criticality_id = normalizedCriticality.criticality_id || DEFAULT_CRIT_ID;
         onSaveRow(tx.id, normalized, addAnother);
     };
 
@@ -448,19 +461,19 @@ export function useTransactionRow({
                 onCancelRow(tx.id);
             } else {
                 setEditing(null);
-                setDraft({ ...tx });
+                setDraft({ ...tx, ...normalizeCriticalityPair(tx, CRITICALITY_OPTIONS) });
                 logger.info('cancel row edit (local fallback)', { id: tx.id });
             }
         } catch (err) {
             logger.error('onCancelRow handler failed', err);
             try { setEditing(null); } catch (_) {}
-            setDraft({ ...tx });
+            setDraft({ ...tx, ...normalizeCriticalityPair(tx, CRITICALITY_OPTIONS) });
         }
     };
 
     const onStartRowEdit = () => {
         startEditingRow(tx.id);
-        setDraft({ ...tx });
+        setDraft({ ...tx, ...normalizeCriticalityPair(tx, CRITICALITY_OPTIONS) });
     };
 
     return {
@@ -520,6 +533,7 @@ export function useTransactionRow({
         onStartRowEdit,
         CRITICALITY_OPTIONS,
         DEFAULT_CRIT,
+        DEFAULT_CRIT_ID,
         getCriticalityForCategory,
         getDefaultPaymentMethodForAccount,
     };

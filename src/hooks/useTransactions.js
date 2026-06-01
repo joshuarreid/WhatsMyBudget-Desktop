@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import budgetTransactionService from '../services/BudgetTransactionService';
 import { subscribe as subscribeTransactionEvents } from '../services/TransactionEvents';
+import { normalizeCriticalityPair } from '../features/transactionTable/utils/constants';
 
 /**
  * useTransactions - fetches transactions for given filters.
@@ -8,6 +9,14 @@ import { subscribe as subscribeTransactionEvents } from '../services/Transaction
  */
 
 export default function useTransactions(filters) {
+            const normalizeListResponse = useCallback((result) => {
+                if (!result || !Array.isArray(result.transactions)) return result;
+                return {
+                    ...result,
+                    transactions: result.transactions.map((tx) => ({ ...(tx || {}), ...normalizeCriticalityPair(tx || {}) })),
+                };
+            }, []);
+
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -20,15 +29,14 @@ export default function useTransactions(filters) {
         try {
             console.log("[useTransactions] fetchData called with filters", currentFilters);
             const transactions = await budgetTransactionService.getTransactions(currentFilters);
-            setData(transactions);
+            setData(normalizeListResponse(transactions));
         } catch (err) {
             console.error("[useTransactions] Error fetching transactions", err);
-            setResult()
-            setResult('Error: ' + (err && err.message ? err.message : String(err)));
+            setError('Error: ' + (err && err.message ? err.message : String(err)));
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [normalizeListResponse]);
 
     useEffect(() => {
         fetchData(filters);
@@ -46,7 +54,7 @@ export default function useTransactions(filters) {
         return unsub;
     }, [fetchData, filters]);
 
-    const refetch = useCallback(() => fetchData(filters, [fetchData, filters]));
+    const refetch = useCallback(() => fetchData(filters), [fetchData, filters]);
     return { data, loading, error, refetch };
 }
 
@@ -56,6 +64,23 @@ export default function useTransactions(filters) {
  * @param {Object} filters - Must include account.
  */
 export function useBudgetAndProjectedTransactionsForAccount(filters) {
+            const normalizeAccountSplit = useCallback((result = {}) => {
+                const normalizeList = (list = {}) => ({
+                    ...list,
+                    transactions: Array.isArray(list.transactions)
+                        ? list.transactions.map((tx) => ({ ...(tx || {}), ...normalizeCriticalityPair(tx || {}) }))
+                        : [],
+                });
+
+                return {
+                    personalTransactions: normalizeList(result.personalTransactions || { transactions: [], count: 0, total: 0 }),
+                    jointTransactions: normalizeList(result.jointTransactions || { transactions: [], count: 0, total: 0 }),
+                    personalTotal: result.personalTotal || 0,
+                    jointTotal: result.jointTotal || 0,
+                    total: result.total || 0,
+                };
+            }, []);
+
     const [data, setData] = useState({
         personalTransactions: { transactions: [], count: 0, total: 0 },
         jointTransactions: { transactions: [], count: 0, total: 0 },
@@ -78,13 +103,7 @@ export function useBudgetAndProjectedTransactionsForAccount(filters) {
             const result = await budgetTransactionService.getTransactionsForAccount(currentFilters);
             // Only set data if the period matches the latest
             if (currentFilters?.statementPeriod === latestPeriodRef.current) {
-                setData({
-                    personalTransactions: result.personalTransactions || { transactions: [], count: 0, total: 0 },
-                    jointTransactions: result.jointTransactions || { transactions: [], count: 0, total: 0 },
-                    personalTotal: result.personalTotal || 0,
-                    jointTotal: result.jointTotal || 0,
-                    total: result.total || 0
-                });
+                setData(normalizeAccountSplit(result));
             } else {
                 // Ignore stale response
                 console.log("[useTransactionsForAccount] Ignored stale data for period", currentFilters?.statementPeriod);
@@ -95,7 +114,7 @@ export function useBudgetAndProjectedTransactionsForAccount(filters) {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [normalizeAccountSplit]);
 
     useEffect(() => {
         fetchData(filters);

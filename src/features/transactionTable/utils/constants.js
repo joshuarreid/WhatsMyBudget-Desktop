@@ -59,13 +59,66 @@ export const DEFAULT_CURRENCY = 'USD';
  * DEFAULT_CRITICALITY_OPTIONS
  * - Fallback list of criticality strings used when config doesn't provide them.
  */
-export const DEFAULT_CRITICALITY_OPTIONS = ['Essential', 'Nonessential'];
+export const DEFAULT_CRITICALITY_OPTIONS = ['Essential', 'Nonessential', 'Planned'];
 
 /**
  * DEFAULT_CRITICALITY
  * - Default criticality string (first from DEFAULT_CRITICALITY_OPTIONS).
  */
 export const DEFAULT_CRITICALITY = DEFAULT_CRITICALITY_OPTIONS[0];
+
+/**
+ * Canonical criticality lookup used by API transition support.
+ * Backend seeds: 1=Essential, 2=Nonessential, 3=Planned.
+ */
+export const CRITICALITY_LOOKUP = [
+    { id: 1, name: 'Essential' },
+    { id: 2, name: 'Nonessential' },
+    { id: 3, name: 'Planned' },
+];
+
+export const DEFAULT_CRITICALITY_ID = CRITICALITY_LOOKUP[0].id;
+
+/**
+ * Converts a criticality id to canonical display name.
+ * @param {number|string|null|undefined} id
+ * @returns {string|undefined}
+ */
+export function criticalityIdToName(id) {
+    const asNumber = Number(id);
+    if (!Number.isFinite(asNumber)) return undefined;
+    const matched = CRITICALITY_LOOKUP.find((item) => item.id === asNumber);
+    return matched?.name;
+}
+
+/**
+ * Converts a criticality string to canonical id (case-insensitive).
+ * @param {string|null|undefined} name
+ * @returns {number|undefined}
+ */
+export function criticalityNameToId(name) {
+    if (name == null) return undefined;
+    const s = String(name).trim().toLowerCase();
+    if (!s) return undefined;
+    const matched = CRITICALITY_LOOKUP.find((item) => item.name.toLowerCase() === s);
+    return matched?.id;
+}
+
+/**
+ * Normalizes {criticality, criticality_id} so both fields stay in sync.
+ * @param {Object} tx
+ * @param {string[]} [options]
+ * @returns {{ criticality: string, criticality_id: number }}
+ */
+export function normalizeCriticalityPair(tx = {}, options = DEFAULT_CRITICALITY_OPTIONS) {
+    const fromId = criticalityIdToName(tx?.criticality_id);
+    const normalizedName = normalizeCriticality(tx?.criticality ?? fromId, options, DEFAULT_CRITICALITY);
+    const normalizedId = criticalityNameToId(normalizedName) ?? DEFAULT_CRITICALITY_ID;
+    return {
+        criticality: normalizedName,
+        criticality_id: normalizedId,
+    };
+}
 
 /**
  * DEFAULT_SMARTSELECT_MODE
@@ -258,6 +311,11 @@ const constants = {
     DEFAULT_CURRENCY,
     DEFAULT_CRITICALITY_OPTIONS,
     DEFAULT_CRITICALITY,
+    CRITICALITY_LOOKUP,
+    DEFAULT_CRITICALITY_ID,
+    criticalityIdToName,
+    criticalityNameToId,
+    normalizeCriticalityPair,
     DEFAULT_SMARTSELECT_MODE,
     STATEMENT_PERIOD_CACHE_KEY,
     STATEMENT_PERIOD_LOOKBACK,

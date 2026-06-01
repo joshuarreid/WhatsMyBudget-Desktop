@@ -12,9 +12,12 @@ import {
 } from '../../../config/config.js';
 import {
     DEFAULT_CRITICALITY_OPTIONS,
+    DEFAULT_CRITICALITY_ID,
     STATEMENT_PERIOD_CACHE_KEY,
     TEMP_ID_PREFIX,
     CONFIG_KEYS,
+    criticalityNameToId,
+    normalizeCriticalityPair,
 } from '../utils/constants';
 import budgetTransactionService from '../../../services/BudgetTransactionService';
 import projectedTransactionService from '../../../services/ProjectedTransactionService';
@@ -36,7 +39,10 @@ const logger = {
 const CRITICALITY_OPTIONS = (() => {
     try {
         const opts = getConfig(CONFIG_KEYS.CRITICALITY_OPTIONS);
-        if (Array.isArray(opts) && opts.length > 0) return opts.map(String);
+        if (Array.isArray(opts) && opts.length > 0) {
+            const normalized = opts.map(String);
+            return normalized.includes('Planned') ? normalized : [...normalized, 'Planned'];
+        }
         logger.info('criticalityOptions not found in config; using defaults', { fallback: DEFAULT_CRITICALITY_OPTIONS });
         return DEFAULT_CRITICALITY_OPTIONS;
     } catch (err) {
@@ -90,7 +96,10 @@ function flattenAccountProjectedList(accountList) {
  */
 function annotateProjection(arr) {
     if (!Array.isArray(arr)) return [];
-    return arr.map((item) => ({ ...(item || {}), __isProjected: true }));
+    return arr.map((item) => {
+        const normalizedCriticality = normalizeCriticalityPair(item || {}, CRITICALITY_OPTIONS);
+        return { ...(item || {}), ...normalizedCriticality, __isProjected: true };
+    });
 }
 
 /**
@@ -134,7 +143,9 @@ export function useTransactionTable(filters) {
         () => [
             ...(txResult.personalTransactions?.transactions || []),
             ...(txResult.jointTransactions?.transactions || [])
-        ].sort((a, b) => new Date(b.transactionDate) - new Date(a.transactionDate)),
+        ]
+            .map((tx) => ({ ...(tx || {}), ...normalizeCriticalityPair(tx || {}, CRITICALITY_OPTIONS) }))
+            .sort((a, b) => new Date(b.transactionDate) - new Date(a.transactionDate)),
         [txResult.personalTransactions, txResult.jointTransactions]
     );
 
@@ -158,12 +169,6 @@ export function useTransactionTable(filters) {
             statementPeriod &&
             lastRequestedPeriodRef.current === statementPeriod
         ) {
-            // Only update state if the data is for the correct period
-            const serverTx = [
-                ...(txResult.personalTransactions?.transactions || []),
-                ...(txResult.jointTransactions?.transactions || [])
-            ].sort((a, b) => new Date(b.transactionDate) - new Date(a.transactionDate));
-
             const projSorted = Array.isArray(projectedTx) && projectedTx.length > 0
                 ? [...projectedTx].map((p) => ({ ...p, __isProjected: true })).sort((a, b) => new Date(b.transactionDate) - new Date(a.transactionDate))
                 : [];
@@ -175,7 +180,7 @@ export function useTransactionTable(filters) {
             logger.info('[useTransactionTable] Populated localTx for current period', { statementPeriod });
         }
         // Else, do nothing: prevents stale fetches from updating state!
-    }, [isStatementPeriodLoaded, statementPeriod, txResult.personalTransactions, txResult.jointTransactions, projectedTx]);
+    }, [isStatementPeriodLoaded, statementPeriod, projectedTx, serverTx]);
 
     /**
      * Clear transactions immediately when statementPeriod changes.
@@ -293,6 +298,7 @@ export function useTransactionTable(filters) {
             amount: 0,
             category: '',
             criticality: defaultCrit,
+            criticality_id: null,
             transactionDate: new Date().toISOString(),
             account: filters?.account || '',
             paymentMethod: defaultPM,
@@ -319,6 +325,7 @@ export function useTransactionTable(filters) {
             amount: 0,
             category: '',
             criticality: defaultCrit,
+            criticality_id: null,
             transactionDate: new Date().toISOString(),
             account: filters?.account || '',
             paymentMethod: defaultPM,
@@ -553,6 +560,12 @@ export function useTransactionTable(filters) {
         const errors = [];
         if (!tx.name || String(tx.name).trim() === '') errors.push('Name is required');
         if (tx.amount == null || Number.isNaN(Number(tx.amount))) errors.push('Amount must be a number');
+        if (tx.criticality_id != null && tx.criticality_id !== '') {
+            const asNumber = Number(tx.criticality_id);
+            if (!Number.isFinite(asNumber) || ![1, 2, 3].includes(asNumber)) {
+                errors.push('Criticality ID must be one of: 1, 2, 3');
+            }
+        }
         if (tx.criticality != null && String(tx.criticality).trim() !== '') {
             const val = String(tx.criticality).trim();
             const match = CRITICALITY_OPTIONS.find((o) => o.toLowerCase() === val.toLowerCase());
@@ -616,6 +629,10 @@ export function useTransactionTable(filters) {
             if (statementPeriod) {
                 txToPersist = { ...txToPersist, statementPeriod };
             }
+            txToPersist = {
+                ...txToPersist,
+                ...normalizeCriticalityPair(txToPersist, CRITICALITY_OPTIONS),
+            };
             const isNew = String(id).startsWith(TEMP_ID_PREFIX) || txToPersist.__isNew;
             if (isNew) {
                 const validationErrors = validateForCreate(txToPersist);
@@ -636,7 +653,11 @@ export function useTransactionTable(filters) {
                     const payload = stripClientFields({ ...txToPersist, statementPeriod });
                     if (txToPersist.__isProjected) {
                         const created = await projectedTransactionService.createTransaction(payload);
-                        const createdWithFlag = { ...created, __isProjected: true };
+                        const createdWithFlag = {
+                            ...created,
+                            ...normalizeCriticalityPair(created || {}, CRITICALITY_OPTIONS),
+                            __isProjected: true,
+                        };
                         setLocalTx((prev) => prev.map((t) => (t.id === id ? createdWithFlag : t)));
                         try {
                             publishTransactionEvents({
@@ -674,8 +695,9 @@ export function useTransactionTable(filters) {
                         }
                     } else {
                         const created = await budgetTransactionService.createTransaction(payload);
-                        setLocalTx((prev) => prev.map((t) => (t.id === id ? { ...created } : t)));
-                        try { publishTransactionEvents({ type: 'transactionsChanged', reason: 'create', transaction: created }); } catch (err) { logger.error('publish transaction event failed', err); }
+                        const normalizedCreated = { ...created, ...normalizeCriticalityPair(created || {}, CRITICALITY_OPTIONS) };
+                        setLocalTx((prev) => prev.map((t) => (t.id === id ? normalizedCreated : t)));
+                        try { publishTransactionEvents({ type: 'transactionsChanged', reason: 'create', transaction: normalizedCreated }); } catch (err) { logger.error('publish transaction event failed', err); }
                         logger.info('handleSaveRow: created', { tempId: id, createdId: created.id });
                         if (addAnother) {
                             const defaultPM = getDefaultPaymentMethodForAccount(filters?.account) || '';
@@ -685,6 +707,7 @@ export function useTransactionTable(filters) {
                                 amount: 0,
                                 category: '',
                                 criticality: '',
+                                criticality_id: null,
                                 transactionDate: new Date().toISOString(),
                                 account: filters?.account || '',
                                 paymentMethod: defaultPM,
@@ -782,6 +805,10 @@ export function useTransactionTable(filters) {
             const patch = {};
             if (field === 'amount') patch.amount = Number(value) || 0;
             else if (field === 'transactionDate') patch.transactionDate = value ? new Date(value).toISOString() : undefined;
+            else if (field === 'criticality') {
+                patch.criticality = value;
+                patch.criticality_id = criticalityNameToId(value) ?? DEFAULT_CRITICALITY_ID;
+            }
             else patch[field] = value;
             await handleSaveRow(id, patch, false);
         },

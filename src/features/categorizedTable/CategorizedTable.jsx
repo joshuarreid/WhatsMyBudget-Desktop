@@ -83,13 +83,17 @@ export default function CategorizedTable(props) {
      * @type {number}
      */
     const projectedTotal = useMemo(() => {
+        const critId = mergedFilters.criticality_id != null ? Number(mergedFilters.criticality_id) : null;
         const crit = String(mergedFilters.criticality || '').toLowerCase();
         return Array.isArray(projectedTx)
             ? projectedTx
-                .filter(tx => String(tx.criticality || '').toLowerCase() === crit)
+                .filter((tx) => {
+                    if (Number.isFinite(critId)) return Number(tx?.criticality_id) === critId;
+                    return String(tx?.criticality || '').toLowerCase() === crit;
+                })
                 .reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0)
             : 0;
-    }, [projectedTx, mergedFilters.criticality]);
+    }, [projectedTx, mergedFilters.criticality, mergedFilters.criticality_id]);
 
     /**
      * Calculates projected totals by category for this table's criticality.
@@ -99,17 +103,21 @@ export default function CategorizedTable(props) {
      * @type {Record<string, number>}
      */
     const projectedTotalsByCategory = useMemo(() => {
+        const critId = mergedFilters.criticality_id != null ? Number(mergedFilters.criticality_id) : null;
         const crit = String(mergedFilters.criticality || '').toLowerCase();
         if (!Array.isArray(projectedTx)) return {};
         return projectedTx
-            .filter(tx => String(tx.criticality || '').toLowerCase() === crit)
+            .filter((tx) => {
+                if (Number.isFinite(critId)) return Number(tx?.criticality_id) === critId;
+                return String(tx?.criticality || '').toLowerCase() === crit;
+            })
             .reduce((acc, tx) => {
                 const cat = tx.category || 'Uncategorized';
                 const amount = Number(tx.amount) || 0;
                 acc[cat] = (acc[cat] || 0) + amount;
                 return acc;
             }, {});
-    }, [projectedTx, mergedFilters.criticality]);
+    }, [projectedTx, mergedFilters.criticality, mergedFilters.criticality_id]);
 
     logger.info('render data', {
         loading,

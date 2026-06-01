@@ -12,6 +12,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import projectedTransactionService from '../services/ProjectedTransactionService';
 import { subscribe } from '../services/TransactionEvents';
+import { normalizeCriticalityPair } from '../features/transactionTable/utils/constants';
 
 /**
  * Logger for useProjectedTransactions.
@@ -51,7 +52,10 @@ function flattenAccountProjectedList(accountList) {
  */
 function annotateProjection(arr) {
     if (!Array.isArray(arr)) return [];
-    return arr.map((item) => ({ ...(item || {}), __isProjected: true }));
+    return arr.map((item) => {
+        const criticality = normalizeCriticalityPair(item || {});
+        return { ...(item || {}), ...criticality, __isProjected: true };
+    });
 }
 
 /**

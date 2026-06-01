@@ -7,12 +7,14 @@ export default function SpendingSummary(props) {
     console.log('[SpendingSummary] account:', account);
     const NONESSENTIAL = {
         account: account,
+        criticality_id: 2,
         criticality: "Nonessential"
     }
 
     const ESSENTIAL = {
         account: account,
-        criticality: "essential"
+        criticality_id: 1,
+        criticality: "Essential"
     }
 
     return (

@@ -90,13 +90,13 @@ const projectedTransactionService = {
      *   - { personalTransactions: ProjectedTransactionList, jointTransactions: ProjectedTransactionList, personalTotal, jointTotal, total }
      * @throws {Error} - Rethrows any network / server error.
      */
-    async getTransactionsForAccount({ account, statementPeriod, category, criticality, paymentMethod } = {}, transactionId) {
-        logger.info('getTransactionsForAccount entry', { account, statementPeriod, category, criticality, paymentMethod });
+    async getTransactionsForAccount({ account, statementPeriod, category, criticality, criticality_id, paymentMethod } = {}, transactionId) {
+        logger.info('getTransactionsForAccount entry', { account, statementPeriod, category, criticality, criticality_id, paymentMethod });
         if (!account) throw new Error('Account is required');
         try {
             const config = transactionId
-                ? { params: { account, statementPeriod, category, criticality, paymentMethod }, headers: { 'X-Transaction-ID': transactionId } }
-                : { params: { account, statementPeriod, category, criticality, paymentMethod } };
+                ? { params: { account, statementPeriod, category, criticality, criticality_id, paymentMethod }, headers: { 'X-Transaction-ID': transactionId } }
+                : { params: { account, statementPeriod, category, criticality, criticality_id, paymentMethod } };
             const apiClient = await getApiClient();
             const response = await apiClient.get(`${RESOURCE}/account`, config);
             logger.info('getTransactionsForAccount success', {

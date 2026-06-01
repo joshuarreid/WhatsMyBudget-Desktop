@@ -144,8 +144,8 @@ const budgetTransactionService = {
     /**
      * GET /api/transactions/account
      */
-    async getTransactionsForAccount({ account, statementPeriod, category, criticality, paymentMethod }) {
-        logger.info('getTransactionsForAccount entry', { account, statementPeriod, category, criticality, paymentMethod });
+    async getTransactionsForAccount({ account, statementPeriod, category, criticality, criticality_id, paymentMethod }) {
+        logger.info('getTransactionsForAccount entry', { account, statementPeriod, category, criticality, criticality_id, paymentMethod });
         if (!account) throw new Error('Account is required');
         try {
             const apiClient = await getApiClient();
@@ -155,6 +155,7 @@ const budgetTransactionService = {
                     statementPeriod,
                     category,
                     criticality,
+                    criticality_id,
                     paymentMethod,
                 },
             });
@@ -254,8 +255,8 @@ const budgetTransactionService = {
      * @returns {Object} BudgetTransactionList { transactions, count, total }
      * @throws {Error} If the request fails.
      */
-    async getBudgetTransactionsForAccount({ account, statementPeriod, category, criticality, paymentMethod }) {
-        logger.info('getBudgetTransactionsForAccount entry', { account, statementPeriod, category, criticality, paymentMethod });
+    async getBudgetTransactionsForAccount({ account, statementPeriod, category, criticality, criticality_id, paymentMethod }) {
+        logger.info('getBudgetTransactionsForAccount entry', { account, statementPeriod, category, criticality, criticality_id, paymentMethod });
         if (!account) throw new Error('Account is required');
         try {
             const apiClient = await getApiClient();
@@ -265,6 +266,7 @@ const budgetTransactionService = {
                     statementPeriod,
                     category,
                     criticality,
+                    criticality_id,
                     paymentMethod,
                 },
             });

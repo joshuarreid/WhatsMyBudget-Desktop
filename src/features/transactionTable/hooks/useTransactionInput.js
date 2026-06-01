@@ -190,7 +190,7 @@ export default function useTransactionRowInput({ className = "tt-input" } = {}) 
      * @returns {Object}
      */
     const getSelectProps = useCallback(({ tx, field, value, editValueRef, CRITICALITY_OPTIONS, DEFAULT_CRITICALITY, onSaveEdit, setEditing, onEditKey }) => {
-        const dv = (String(value ?? "").trim() !== "") ? value : DEFAULT_CRITICALITY;
+        const dv = String(value ?? "").trim() !== "" ? value : "";
         return {
             className: finalSelectClass,
             autoFocus: true,

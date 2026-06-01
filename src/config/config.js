@@ -87,7 +87,7 @@ const mergedConfig = {
         filter: getEnv('REACT_APP_JOINT_FILTER', getEnv('JOINT_FILTER', '')),
         paymentMethod: getEnv('REACT_APP_JOINT_PAYMENT_METHOD', getEnv('JOINT_PAYMENT_METHOD', '')),
     },
-    criticalityOptions: parseArrayEnv('REACT_APP_CRITICALITY_OPTIONS', parseArrayEnv('CRITICALITY_OPTIONS', [])),
+    criticalityOptions: parseArrayEnv('REACT_APP_CRITICALITY_OPTIONS', parseArrayEnv('CRITICALITY_OPTIONS', ['Essential', 'Nonessential', 'Planned'])),
     statementPeriodPrevMonths: Number(getEnv('REACT_APP_STATEMENT_PERIOD_PREV_MONTHS', getEnv('STATEMENT_PERIOD_PREV_MONTHS', 3))),
     statementPeriodForwardMonths: Number(getEnv('REACT_APP_STATEMENT_PERIOD_FORWARD_MONTHS', getEnv('STATEMENT_PERIOD_FORWARD_MONTHS', 5))),
     statementPeriodCacheKey: getEnv('REACT_APP_STATEMENT_PERIOD_CACHE_KEY', getEnv('STATEMENT_PERIOD_CACHE_KEY', 'currentStatementPeriod')),
