@@ -17,6 +17,7 @@ A polished, fork-ready template that combines Create React App (CRA) for the ren
 - [Common issues & fixes](#common-issues--fixes)
 - [CI / Releases recommendations](#ci--releases-recommendations)
 - [Security & best practices](#security--best-practices)
+- [Project updates](#project-updates)
 - [Contributing & licensing](#contributing--licensing)
 - [Quick troubleshooting checklist](#quick-troubleshooting-checklist)
 
@@ -130,6 +131,10 @@ A polished, fork-ready template that combines Create React App (CRA) for the ren
   - Keep `contextIsolation: true` and `nodeIntegration: false`
 - Replace console logs with `electron-log` before packaging to capture persistent logs
 - Validate and sanitize all data coming from renderer before passing to fs or OS operations
+
+## Project updates
+- Changelog: `docs/CHANGELOG.md`
+- Architecture decisions: `docs/decisions/ADR-001-v2-jwt-session-auth.md`
 
 ## Contributing & licensing
 - Fork → feature branch → PR to your repo (or upstream if applicable)

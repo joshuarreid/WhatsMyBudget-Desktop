@@ -1,7 +1,7 @@
 /**
  * PaymentSummaryService
  * - Service for fetching payment summaries from the backend REST API.
- * - Calls /api/payment-summary endpoint with accounts and statementPeriod.
+ * - Calls /api/v2/payment-summary endpoint with accounts and statementPeriod.
  * - Follows Bulletproof React conventions and robust logging.
  *
  * @module PaymentSummaryService
@@ -14,11 +14,11 @@ const logger = {
 
 import { getApiClient } from '../lib/apiClient'; // Centralized axios instance
 
-const RESOURCE = '/api/payment-summary';
+const RESOURCE = '/api/v2/payment-summary';
 
 const PaymentSummaryService = {
     /**
-     * GET /api/payment-summary
+     * GET /api/v2/payment-summary
      * - Fetches payment summary for the given accounts and statement period.
      *
      * @async
