@@ -16,7 +16,7 @@ const logger = {
 
 import { getApiClient } from '../lib/apiClient';
 
-const RESOURCE = '/api/projections';
+const RESOURCE = '/api/v2/projected-transactions';
 
 const CRITICALITY_ID_BY_NAME = {
     essential: 1,

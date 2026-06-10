@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 
 import './App.css';
@@ -10,6 +10,8 @@ import User2Screen from "./screens/User2Screen/User2Screen";
 import TransactionScreen from "./screens/TransactionScreen/TransactionScreen";
 import { StatementPeriodProvider } from './context/StatementPeriodProvider';
 import PaymentScreen from "./features/payments/components/PaymentScreen";
+import LoginScreen from './screens/LoginScreen/LoginScreen';
+import { isAuthenticated, subscribeAuthSession } from './lib/authSession';
 
 /**
  * App
@@ -24,6 +26,27 @@ const logger = {
 
 function App() {
     logger.info('App initialized');
+
+    const [authed, setAuthed] = useState(() => isAuthenticated());
+
+    useEffect(() => {
+        const unsub = subscribeAuthSession(() => {
+            setAuthed(isAuthenticated());
+        });
+        return unsub;
+    }, []);
+
+    useEffect(() => {
+        const timerId = setInterval(() => {
+            setAuthed(isAuthenticated());
+        }, 30000);
+        return () => clearInterval(timerId);
+    }, []);
+
+    if (!authed) {
+        return <LoginScreen onLoginSuccess={() => setAuthed(true)} />;
+    }
+
     return (
         <Router>
             <Sidebar />

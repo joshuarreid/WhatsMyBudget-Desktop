@@ -11,7 +11,7 @@ const logger = {
 
 import { getApiClient } from '../lib/apiClient'; // centralized axios instance
 
-const RESOURCE = '/api/transactions';
+const RESOURCE = '/api/v2/transactions';
 
 const CRITICALITY_ID_BY_NAME = {
     essential: 1,

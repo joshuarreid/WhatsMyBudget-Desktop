@@ -56,7 +56,7 @@ export async function getAllFromServer() {
     logger.info('getAllFromServer entry');
     try {
         const apiClient = await getApiClient();
-        const response = await apiClient.get('/api/statement-periods');
+        const response = await apiClient.get('/api/v2/statements');
         logger.info('getAllFromServer success', { count: Array.isArray(response.data) ? response.data.length : 0 });
         return response.data;
     } catch (err) {

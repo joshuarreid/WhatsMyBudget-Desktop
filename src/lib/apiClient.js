@@ -5,6 +5,12 @@ const logger = {
 
 import axios from 'axios';
 import config from "../config/config.js";
+import { clearAuthSession, getAccessToken } from './authSession';
+
+function isV2ApiRequest(request) {
+    const requestUrl = String(request?.url || '');
+    return requestUrl.startsWith('/api/v2/') || requestUrl.includes('/api/v2/');
+}
 
 function generateTransactionId() {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -44,6 +50,13 @@ export async function getApiClient() {
                 request.headers = request.headers || {};
                 request.headers['X-Transaction-ID'] = tx;
 
+                if (isV2ApiRequest(request)) {
+                    const accessToken = getAccessToken();
+                    if (accessToken) {
+                        request.headers.Authorization = `Bearer ${accessToken}`;
+                    }
+                }
+
                 // Log chosen content-type
                 logger.info('request', {
                     url: request.baseURL ? (request.baseURL + (request.url || '')) : request.url,
@@ -76,6 +89,9 @@ export async function getApiClient() {
                 const url = err?.config?.url;
                 const message = err?.response?.data?.message || err.message;
                 logger.error('response error', { url, status, message, raw: err });
+                if (status === 401 && String(url || '').includes('/api/v2/')) {
+                    clearAuthSession('invalid');
+                }
                 // Optionally: attach normalized error payload
                 return Promise.reject(err);
             }

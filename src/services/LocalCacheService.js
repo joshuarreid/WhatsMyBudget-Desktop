@@ -1,6 +1,6 @@
 /**
  * LocalCacheService.
- * Service for /api/cache endpoints using centralized apiClient.
+ * Service for /api/v2/cache endpoints using centralized apiClient.
  * Provides get, set, delete, and deleteAll cache operations.
  *
  * @module LocalCacheService
@@ -13,7 +13,7 @@ const logger = {
 
 import { getApiClient } from '../lib/apiClient';
 
-const RESOURCE = '/api/cache';
+const RESOURCE = '/api/v2/cache';
 
 /**
  * Gets cache value by key.
